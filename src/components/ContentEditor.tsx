@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
+import { generateId } from '../utils/id';
 import { getCitations } from '../services/storage';
 import { colors, spacing } from '../theme';
 import { Citation, ContentBlock } from '../types';
@@ -35,7 +35,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
   };
 
   const addBlock = (type: ContentBlock['type']) => {
-    const block: ContentBlock = { id: uuidv4(), type };
+    const block: ContentBlock = { id: generateId(), type };
     if (type === 'paragraph' || type === 'quote') block.text = '';
     if (type === 'heading') {
       block.text = '';

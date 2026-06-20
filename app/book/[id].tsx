@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
+import { generateId } from '../../src/utils/id';
 import { TOS_SUBJECTS } from '../../src/data/tosSubjects';
 import {
   getBook,
@@ -52,7 +52,7 @@ export default function BookDetailScreen() {
       ...book,
       sections: [
         ...book.sections,
-        { id: uuidv4(), materialId, order: book.sections.length },
+        { id: generateId(), materialId, order: book.sections.length },
       ],
     };
     await saveBook(updated);

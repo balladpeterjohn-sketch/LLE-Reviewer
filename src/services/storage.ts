@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
+import { generateId } from '../utils/id';
 import {
   AppData,
   BookProject,
@@ -71,13 +71,13 @@ export async function createMaterial(
 ): Promise<ReadingMaterial> {
   const now = new Date().toISOString();
   const material: ReadingMaterial = {
-    id: uuidv4(),
+    id: generateId(),
     title: partial.title,
     subjectId: partial.subjectId,
     topicId: partial.topicId,
     blocks: [
       {
-        id: uuidv4(),
+        id: generateId(),
         type: 'paragraph',
         text: '',
       },
@@ -124,7 +124,7 @@ export async function createCitation(
   const now = new Date().toISOString();
   const citation: Citation = {
     ...partial,
-    id: uuidv4(),
+    id: generateId(),
     createdAt: now,
     updatedAt: now,
   };
@@ -167,7 +167,7 @@ export async function createBook(
 ): Promise<BookProject> {
   const now = new Date().toISOString();
   const book: BookProject = {
-    id: uuidv4(),
+    id: generateId(),
     title: partial.title,
     subtitle: partial.subtitle,
     author: partial.author,
