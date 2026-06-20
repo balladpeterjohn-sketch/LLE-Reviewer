@@ -116,6 +116,12 @@ export default function EditMaterialScreen() {
 
         <View style={styles.actions}>
           <Button
+            title="Preview"
+            icon="eye"
+            variant="outline"
+            onPress={() => router.push(`/material/${material.id}/preview`)}
+          />
+          <Button
             title={saving ? 'Saving...' : 'Save Material'}
             icon="save"
             onPress={handleSave}

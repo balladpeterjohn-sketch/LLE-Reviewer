@@ -24,9 +24,14 @@ export type ContentBlockType =
   | 'heading'
   | 'paragraph'
   | 'image'
+  | 'image-text'
+  | 'image-collage'
   | 'table'
   | 'quote'
   | 'citation';
+
+export type ImagePosition = 'left' | 'right';
+export type CollageColumns = 2 | 3;
 
 export interface TableCell {
   value: string;
@@ -38,6 +43,9 @@ export interface ContentBlock {
   text?: string;
   level?: 1 | 2 | 3;
   imageUri?: string;
+  imageUris?: string[];
+  imagePosition?: ImagePosition;
+  collageColumns?: CollageColumns;
   caption?: string;
   rows?: TableCell[][];
   citationId?: string;

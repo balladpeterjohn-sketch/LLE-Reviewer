@@ -30,6 +30,28 @@ function renderBlock(
       return block.imageUri
         ? `<figure><img src="${block.imageUri}" style="max-width:100%;height:auto;" alt="${escapeHtml(block.caption ?? 'Figure')}"/><figcaption>${escapeHtml(block.caption ?? '')}</figcaption></figure>`
         : '';
+    case 'image-text': {
+      if (!block.imageUri && !block.text) return '';
+      const imageLeft = (block.imagePosition ?? 'left') === 'left';
+      const img = block.imageUri
+        ? `<img src="${block.imageUri}" class="side-img" alt="${escapeHtml(block.caption ?? 'Figure')}"/>`
+        : '';
+      const text = `<div class="side-text"><p>${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>${block.caption ? `<p class="side-caption">${escapeHtml(block.caption)}</p>` : ''}</div>`;
+      const inner = imageLeft ? `${img}${text}` : `${text}${img}`;
+      return `<div class="image-text-layout">${inner}</div>`;
+    }
+    case 'image-collage': {
+      const uris = block.imageUris ?? [];
+      if (uris.length === 0) return '';
+      const cols = block.collageColumns ?? 2;
+      const imgs = uris
+        .map((uri) => `<img src="${uri}" class="collage-img cols-${cols}" alt="Collage image"/>`)
+        .join('');
+      const cap = block.caption
+        ? `<figcaption>${escapeHtml(block.caption)}</figcaption>`
+        : '';
+      return `<figure class="collage"><div class="collage-grid cols-${cols}">${imgs}</div>${cap}</figure>`;
+    }
     case 'table': {
       const rows = block.rows ?? [];
       if (rows.length === 0) return '';
@@ -133,6 +155,15 @@ export function buildBookHtml(
     .bibliography h2 { page-break-before: always; }
     .bib-entry { font-size: 13px; text-indent: -20px; padding-left: 20px; margin: 8px 0; }
     .cover-note { text-align: center; font-size: 11px; color: #999; margin-top: 60px; }
+    .image-text-layout { display: flex; flex-direction: row; gap: 16px; align-items: flex-start; margin: 20px 0; }
+    .side-img { width: 180px; max-height: 200px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .side-text { flex: 1; }
+    .side-caption { font-size: 12px; color: #666; font-style: italic; margin-top: 8px; }
+    .collage { margin: 20px 0; }
+    .collage-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .collage-img { border-radius: 8px; object-fit: cover; height: 140px; }
+    .collage-img.cols-2 { width: calc(50% - 4px); }
+    .collage-img.cols-3 { width: calc(33.33% - 6px); }
   </style>
 </head>
 <body>

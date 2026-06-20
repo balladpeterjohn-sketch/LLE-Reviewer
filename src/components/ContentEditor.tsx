@@ -41,6 +41,14 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
       block.text = '';
       block.level = 2;
     }
+    if (type === 'image-text') {
+      block.text = '';
+      block.imagePosition = 'left';
+    }
+    if (type === 'image-collage') {
+      block.imageUris = [];
+      block.collageColumns = 2;
+    }
     if (type === 'table') {
       block.rows = [
         [{ value: 'Column 1' }, { value: 'Column 2' }],
@@ -62,19 +70,37 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
     onChange(next);
   };
 
-  const pickImage = async (index: number) => {
+  const pickImage = async (index: number, field: 'imageUri' | 'collage' = 'imageUri') => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.8,
       base64: true,
+      allowsMultipleSelection: field === 'collage',
     });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
+    if (result.canceled) return;
+
+    if (field === 'collage') {
+      const uris = result.assets.map((asset) =>
+        asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
+      );
+      const existing = blocks[index].imageUris ?? [];
+      updateBlock(index, { imageUris: [...existing, ...uris] });
+      return;
+    }
+
+    const asset = result.assets[0];
+    if (asset) {
       const uri = asset.base64
         ? `data:image/jpeg;base64,${asset.base64}`
         : asset.uri;
       updateBlock(index, { imageUri: uri });
     }
+  };
+
+  const removeCollageImage = (blockIndex: number, imageIndex: number) => {
+    const uris = [...(blocks[blockIndex].imageUris ?? [])];
+    uris.splice(imageIndex, 1);
+    updateBlock(blockIndex, { imageUris: uris });
   };
 
   const openCitationPicker = async (index: number) => {
@@ -224,6 +250,110 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
             </View>
           )}
 
+          {block.type === 'image-text' && (
+            <View>
+              <View style={styles.positionRow}>
+                <Text style={styles.positionLabel}>Image position:</Text>
+                {(['left', 'right'] as const).map((pos) => (
+                  <Pressable
+                    key={pos}
+                    style={[
+                      styles.levelChip,
+                      block.imagePosition === pos && styles.levelChipActive,
+                    ]}
+                    onPress={() => updateBlock(index, { imagePosition: pos })}
+                  >
+                    <Text
+                      style={[
+                        styles.levelChipText,
+                        block.imagePosition === pos && styles.levelChipTextActive,
+                      ]}
+                    >
+                      {pos === 'left' ? 'Left' : 'Right'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.imageTextPreview}>
+                {block.imageUri ? (
+                  <Image source={{ uri: block.imageUri }} style={styles.sidePreviewImage} resizeMode="cover" />
+                ) : (
+                  <Pressable style={styles.sidePreviewImage} onPress={() => pickImage(index)}>
+                    <Ionicons name="image-outline" size={28} color={colors.textSecondary} />
+                  </Pressable>
+                )}
+                <TextInput
+                  style={[styles.textArea, { flex: 1, minHeight: 120 }]}
+                  multiline
+                  placeholder="Text beside the image..."
+                  value={block.text}
+                  onChangeText={(text) => updateBlock(index, { text })}
+                  textAlignVertical="top"
+                />
+              </View>
+              <Button title="Change Image" onPress={() => pickImage(index)} variant="outline" />
+              <TextInput
+                style={styles.captionInput}
+                placeholder="Caption (optional)"
+                value={block.caption}
+                onChangeText={(caption) => updateBlock(index, { caption })}
+              />
+            </View>
+          )}
+
+          {block.type === 'image-collage' && (
+            <View>
+              <View style={styles.positionRow}>
+                <Text style={styles.positionLabel}>Columns:</Text>
+                {([2, 3] as const).map((cols) => (
+                  <Pressable
+                    key={cols}
+                    style={[
+                      styles.levelChip,
+                      block.collageColumns === cols && styles.levelChipActive,
+                    ]}
+                    onPress={() => updateBlock(index, { collageColumns: cols })}
+                  >
+                    <Text
+                      style={[
+                        styles.levelChipText,
+                        block.collageColumns === cols && styles.levelChipTextActive,
+                      ]}
+                    >
+                      {cols} cols
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.collageEditor}>
+                {(block.imageUris ?? []).map((uri, imgIdx) => (
+                  <View key={imgIdx} style={styles.collageThumbWrap}>
+                    <Image source={{ uri }} style={styles.collageThumb} resizeMode="cover" />
+                    <Pressable
+                      style={styles.removeThumb}
+                      onPress={() => removeCollageImage(index, imgIdx)}
+                    >
+                      <Ionicons name="close-circle" size={22} color={colors.danger} />
+                    </Pressable>
+                  </View>
+                ))}
+                <Pressable
+                  style={styles.collageAdd}
+                  onPress={() => pickImage(index, 'collage')}
+                >
+                  <Ionicons name="add" size={28} color={colors.primary} />
+                  <Text style={styles.addChipText}>Add photos</Text>
+                </Pressable>
+              </View>
+              <TextInput
+                style={styles.captionInput}
+                placeholder="Collage caption (optional)"
+                value={block.caption}
+                onChangeText={(caption) => updateBlock(index, { caption })}
+              />
+            </View>
+          )}
+
           {block.type === 'table' && (
             <View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -274,7 +404,9 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
         <AddChip icon="text" label="Text" onPress={() => addBlock('paragraph')} />
         <AddChip icon="text-outline" label="Heading" onPress={() => addBlock('heading')} />
         <AddChip icon="image" label="Image" onPress={() => addBlock('image')} />
-        <AddChip icon="grid" label="Table" onPress={() => addBlock('table')} />
+        <AddChip icon="albums" label="Side by Side" onPress={() => addBlock('image-text')} />
+        <AddChip icon="grid" label="Collage" onPress={() => addBlock('image-collage')} />
+        <AddChip icon="grid-outline" label="Table" onPress={() => addBlock('table')} />
         <AddChip icon="chatbox-ellipses" label="Quote" onPress={() => addBlock('quote')} />
         <AddChip icon="book" label="Citation" onPress={() => addBlock('citation')} />
       </ScrollView>
@@ -466,4 +598,32 @@ const styles = StyleSheet.create({
   },
   citationAuthors: { fontSize: 14, fontWeight: '600', color: colors.text },
   citationTitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  positionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  positionLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
+  imageTextPreview: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  sidePreviewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#EEE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  collageEditor: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  collageThumbWrap: { position: 'relative' },
+  collageThumb: { width: 90, height: 90, borderRadius: 8 },
+  removeThumb: { position: 'absolute', top: -6, right: -6 },
+  collageAdd: {
+    width: 90,
+    height: 90,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
 });

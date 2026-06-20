@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   Alert,
@@ -26,6 +26,7 @@ import { exportBookToPdf, getSubjectLabel, sharePdf } from '../../src/utils/book
 
 export default function BookDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [book, setBook] = useState<BookProject | null>(null);
   const [allMaterials, setAllMaterials] = useState<ReadingMaterial[]>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -207,13 +208,20 @@ export default function BookDetailScreen() {
         )}
 
         {book.sections.length > 0 && (
-          <Button
-            title={exporting ? 'Generating PDF...' : 'Export Book as PDF'}
-            icon="download"
-            onPress={handleExport}
-            disabled={exporting}
-            style={styles.exportBtn}
-          />
+          <View style={styles.exportActions}>
+            <Button
+              title="Preview Book"
+              icon="eye"
+              variant="outline"
+              onPress={() => router.push(`/book/${book.id}/preview`)}
+            />
+            <Button
+              title={exporting ? 'Generating PDF...' : 'Export Book as PDF'}
+              icon="download"
+              onPress={handleExport}
+              disabled={exporting}
+            />
+          </View>
         )}
       </ScrollView>
 
@@ -297,7 +305,7 @@ const styles = StyleSheet.create({
   sectionMatTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
   sectionSubject: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   sectionActions: { flexDirection: 'row', gap: spacing.sm },
-  exportBtn: { marginTop: spacing.lg },
+  exportActions: { gap: spacing.sm, marginTop: spacing.lg },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
