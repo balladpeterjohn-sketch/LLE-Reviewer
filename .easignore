@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+.git/
+.cache/
+**/.cache/
+**/dotslash/
+**/*DevTools*
+dist/
+web-build/
+*.log
+.claude/
+.agent/
