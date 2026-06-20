@@ -111,24 +111,19 @@ export default function BookSettingsScreen() {
           onSelect={(v) => updateSettings({ marginPreset: v as 'narrow' | 'standard' | 'wide' })}
         />
         <Toggle
-          label="Running Header (book title on each page)"
+          label="Running Header"
           value={book.settings.includeRunningHeader !== false}
           onChange={(v) => updateSettings({ includeRunningHeader: v })}
         />
         <Toggle
-          label="Page Numbers (Page X of Y in footer)"
+          label="Page Numbers (footer)"
           value={book.settings.includePageNumbers !== false}
           onChange={(v) => updateSettings({ includePageNumbers: v })}
         />
         <Field
-          label="Header Text (optional override)"
+          label="Header Title (optional override)"
           value={book.settings.headerText ?? ''}
           onChange={(v) => updateSettings({ headerText: v })}
-        />
-        <Field
-          label="Footer Text (optional override, e.g. your name)"
-          value={book.settings.footerText ?? ''}
-          onChange={(v) => updateSettings({ footerText: v })}
         />
 
         <SectionTitle title="Front Matter" />

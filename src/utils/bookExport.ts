@@ -39,8 +39,8 @@ function buildBookStyles(book: BookProject): string {
   const margins = getMargins(book);
   const showRunning = s.includeRunningHeader !== false;
   const showPages = s.includePageNumbers !== false;
-  const pageTop = showRunning ? '2.6cm' : margins.top;
-  const pageBottom = showPages || showRunning ? '2.4cm' : margins.bottom;
+  const pageTop = showRunning ? '2.7cm' : margins.top;
+  const pageBottom = showPages ? '2.0cm' : margins.bottom;
 
   return `
   @page {
@@ -73,9 +73,8 @@ function buildBookStyles(book: BookProject): string {
     top: 0;
     left: 0;
     right: 0;
-    height: 1.45cm;
-    padding: 0.32cm ${margins.right} 0 ${margins.left};
-    border-bottom: 0.75pt solid #C9A227;
+    height: 1.55cm;
+    padding: 0.28cm ${margins.right} 0 ${margins.left};
     background: #fff;
   }
 
@@ -86,21 +85,45 @@ function buildBookStyles(book: BookProject): string {
     border: 0;
   }
 
+  .print-header .header-main {
+    vertical-align: bottom;
+    width: 72%;
+    padding-bottom: 3px;
+  }
+
+  .print-header .header-label {
+    display: block;
+    font-size: 6.5pt;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: #C9A227;
+    margin-bottom: 2px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+
   .print-header .header-title {
-    font-size: 8.5pt;
+    display: block;
+    font-size: 9.5pt;
     font-weight: 600;
     color: #1B4D3E;
-    vertical-align: bottom;
-    width: 68%;
+    line-height: 1.25;
   }
 
   .print-header .header-meta {
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #666;
-    font-style: italic;
     text-align: right;
     vertical-align: bottom;
-    width: 32%;
+    width: 28%;
+    padding-bottom: 3px;
+    line-height: 1.35;
+  }
+
+  .print-header .header-rule {
+    border: 0;
+    border-bottom: 1pt solid #C9A227;
+    margin: 0;
+    height: 0;
   }
 
   .print-footer {
@@ -108,29 +131,22 @@ function buildBookStyles(book: BookProject): string {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 1.35cm;
-    padding: 0.22cm ${margins.right} 0.28cm ${margins.left};
-    border-top: 0.75pt solid #ddd;
+    height: 1.1cm;
+    padding: 0.18cm ${margins.right} 0.22cm ${margins.left};
     background: #fff;
   }
 
-  .print-footer td {
-    font-size: 8.5pt;
-    color: #666;
-    vertical-align: top;
-    width: 33%;
-  }
-
-  .print-footer .footer-center {
+  .print-footer .footer-page {
     text-align: center;
-    font-weight: 600;
+    font-size: 9pt;
     color: #1B4D3E;
+    font-weight: 500;
+    vertical-align: middle;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
   }
 
-  .print-footer .footer-right { text-align: right; }
-
-  .page-number-full::after {
-    content: "Page " counter(page) " of " counter(pages);
+  .page-number-only::after {
+    content: counter(page);
   }
 
   .cover-pages .cover-page {
@@ -303,7 +319,7 @@ function buildBookStyles(book: BookProject): string {
 
   @media print {
     ${!showRunning ? '.print-header { display: none !important; }' : ''}
-    ${!showPages && !showRunning ? '.print-footer { display: none !important; }' : ''}
+    ${!showPages ? '.print-footer { display: none !important; }' : ''}
     .chapter, .front-section, .back-section { page-break-inside: auto; }
     table, blockquote, .callout, figure, .imgtext-table, .stacked-block { page-break-inside: avoid; }
   }
@@ -335,33 +351,33 @@ function buildBookStyles(book: BookProject): string {
 
 function renderRunningHead(book: BookProject): string {
   const s = book.settings;
-  if (s.includeRunningHeader === false && s.includePageNumbers === false) return '';
-
-  const headerTitle = escapeHtml(s.headerText?.trim() || book.title);
-  const footerNote = escapeHtml(s.footerText?.trim() || book.author);
-  const editionLine = escapeHtml([s.edition, s.year].filter(Boolean).join(' · ') || 'LLE Reviewer');
   const showHeader = s.includeRunningHeader !== false;
   const showPages = s.includePageNumbers !== false;
+  if (!showHeader && !showPages) return '';
+
+  const headerTitle = escapeHtml(s.headerText?.trim() || book.title);
+  const edition = escapeHtml(s.edition?.trim() || '');
+  const year = escapeHtml(s.year?.trim() || '');
+  const editionLine = [edition, year].filter(Boolean).join(' · ');
 
   const header = showHeader
-    ? `<div class="print-header"><table><tr>
-        <td class="header-title">${headerTitle}</td>
-        <td class="header-meta">${editionLine}</td>
-      </tr></table></div>`
+    ? `<div class="print-header">
+        <table cellpadding="0" cellspacing="0" border="0"><tr>
+          <td class="header-main">
+            <span class="header-label">Librarians Licensure Examination Reviewer</span>
+            <span class="header-title">${headerTitle}</span>
+          </td>
+          <td class="header-meta">${editionLine || '&nbsp;'}</td>
+        </tr></table>
+        <hr class="header-rule" />
+      </div>`
     : '';
 
-  const pageCell = showPages
-    ? `<td class="footer-center"><span class="page-number-full"></span></td>`
-    : `<td class="footer-center"></td>`;
-
-  const footer =
-    showHeader || showPages
-      ? `<div class="print-footer"><table><tr>
-          <td class="footer-left">${footerNote}</td>
-          ${pageCell}
-          <td class="footer-right">${headerTitle}</td>
-        </tr></table></div>`
-      : '';
+  const footer = showPages
+    ? `<div class="print-footer"><table cellpadding="0" cellspacing="0" border="0"><tr>
+        <td class="footer-page"><span class="page-number-only"></span></td>
+      </tr></table></div>`
+    : '';
 
   return header + footer;
 }
