@@ -7,8 +7,10 @@ import { formatCitation } from './citation';
 import {
   getImageLayout,
   getImageSize,
-  getImageSizeClass,
   getLayoutClass,
+  getPdfImageCellWidth,
+  getPdfImageMaxHeight,
+  getPdfImageMaxWidth,
   isStackedLayout,
 } from './imageLayout';
 
@@ -37,72 +39,68 @@ function buildBookStyles(book: BookProject): string {
   const margins = getMargins(book);
   const showRunning = s.includeRunningHeader !== false;
   const showPages = s.includePageNumbers !== false;
+  const pageTop = showRunning ? '2.6cm' : margins.top;
+  const pageBottom = showPages || showRunning ? '2.4cm' : margins.bottom;
 
   return `
   @page {
     size: ${page.cssSize};
-    margin: ${margins.top} ${margins.right} ${margins.bottom} ${margins.left};
+    margin: ${pageTop} ${margins.right} ${pageBottom} ${margins.left};
   }
 
   @page cover {
-    margin: 0;
+    margin: 1.2cm;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-  html {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  body {
-    font-family: Georgia, 'Times New Roman', serif;
+  html, body {
     margin: 0;
     padding: 0;
-    color: #1a1a1a;
-    line-height: 1.65;
-    font-size: 11pt;
-    counter-reset: page;
-  }
-
-  .book-content {
     width: 100%;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    color: #1a1a1a;
+    line-height: 1.6;
+    font-size: 11pt;
   }
 
-  ${showRunning ? `
+  img { max-width: 100%; height: auto; border: 0; }
+
+  .book-content { display: block; width: 100%; }
+
   .print-header {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: ${margins.header};
-    padding: 0.35cm ${margins.right} 0 ${margins.left};
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    border-bottom: 0.6pt solid #C9A227;
-    font-size: 8.5pt;
-    color: #5a5a5a;
+    height: 1.45cm;
+    padding: 0.32cm ${margins.right} 0 ${margins.left};
+    border-bottom: 0.75pt solid #C9A227;
     background: #fff;
-    z-index: 1000;
+  }
+
+  .print-header table,
+  .print-footer table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 0;
   }
 
   .print-header .header-title {
+    font-size: 8.5pt;
     font-weight: 600;
     color: #1B4D3E;
-    max-width: 65%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    vertical-align: bottom;
+    width: 68%;
   }
 
   .print-header .header-meta {
+    font-size: 8.5pt;
+    color: #666;
     font-style: italic;
     text-align: right;
-    max-width: 35%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    vertical-align: bottom;
+    width: 32%;
   }
 
   .print-footer {
@@ -110,202 +108,228 @@ function buildBookStyles(book: BookProject): string {
     bottom: 0;
     left: 0;
     right: 0;
-    height: ${margins.footer};
-    padding: 0.2cm ${margins.right} 0.35cm ${margins.left};
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    border-top: 0.6pt solid #ddd;
-    font-size: 8.5pt;
-    color: #666;
+    height: 1.35cm;
+    padding: 0.22cm ${margins.right} 0.28cm ${margins.left};
+    border-top: 0.75pt solid #ddd;
     background: #fff;
-    z-index: 1000;
   }
 
-  .print-footer .footer-left {
-    max-width: 35%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .print-footer td {
+    font-size: 8.5pt;
+    color: #666;
+    vertical-align: top;
+    width: 33%;
   }
 
   .print-footer .footer-center {
-    flex: 1;
     text-align: center;
     font-weight: 600;
     color: #1B4D3E;
   }
 
-  .print-footer .footer-right {
-    max-width: 35%;
-    text-align: right;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  ` : ''}
-
-  ${showPages ? `
-  .page-number::after {
-    content: counter(page);
-  }
+  .print-footer .footer-right { text-align: right; }
 
   .page-number-full::after {
     content: "Page " counter(page) " of " counter(pages);
   }
-  ` : ''}
 
   .cover-pages .cover-page {
     page: cover;
     page-break-after: always;
   }
 
-  .no-running-head {
-    page-break-before: always;
-  }
-
-  @media print {
-    .cover-page,
-    .cover-page * {
-      page-break-inside: avoid;
-    }
-
-    p { orphans: 3; widows: 3; }
-    h2, h3, h4 { page-break-after: avoid; }
-    figure, blockquote, .callout, table { page-break-inside: avoid; }
-    img { max-width: 100%; height: auto; }
-  }
-
-  @media screen {
-    body {
-      max-width: 820px;
-      margin: 0 auto;
-      padding: 24px 28px 48px;
-      background: #f4f2ed;
-    }
-
-    .book-content {
-      background: #fff;
-      padding: 40px 48px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
-      border-radius: 4px;
-      min-height: 80vh;
-    }
-
-    ${showRunning ? `
-    .print-header,
-    .print-footer {
-      position: relative;
-      margin: -40px -48px 24px;
-      width: calc(100% + 96px);
-      border-radius: 4px 4px 0 0;
-    }
-
-    .print-footer {
-      margin: 32px -48px -40px;
-      border-radius: 0 0 4px 4px;
-    }
-    ` : `
-    .print-header,
-    .print-footer { display: none; }
-    `}
-  }
-
   .page-break { page-break-before: always; }
-  .title-page { text-align: center; padding-top: 22vh; min-height: 92vh; }
-  .cover-label { font-size: 10pt; letter-spacing: 2px; text-transform: uppercase; color: #C9A227; margin-bottom: 40px; }
-  .cover-title { font-size: 28pt; color: #1B4D3E; margin: 16px 0; line-height: 1.2; border: none; }
-  .cover-subtitle { font-size: 14pt; color: #555; margin-bottom: 12px; }
-  .cover-edition { font-size: 11pt; color: #777; margin-bottom: 40px; }
-  .cover-author { font-size: 13pt; font-weight: 600; margin-bottom: 8px; }
+
+  .title-page {
+    text-align: center;
+    padding: 120pt 20pt 60pt;
+  }
+
+  .cover-label {
+    font-size: 10pt;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #C9A227;
+    margin-bottom: 36pt;
+  }
+
+  .cover-title {
+    font-size: 26pt;
+    color: #1B4D3E;
+    margin: 12pt 0;
+    line-height: 1.2;
+    border: 0;
+  }
+
+  .cover-subtitle { font-size: 14pt; color: #555; margin-bottom: 10pt; }
+  .cover-edition { font-size: 11pt; color: #777; margin-bottom: 36pt; }
+  .cover-author { font-size: 13pt; font-weight: 600; margin-bottom: 6pt; }
   .cover-publisher { font-size: 10pt; color: #666; }
-  .cover-tos { font-size: 9pt; color: #999; margin-top: 60px; }
-  .copyright-page { padding-top: 8vh; min-height: 70vh; }
-  .copyright-meta { font-size: 10pt; color: #666; margin-top: 12px; }
-  h2 { color: #1B4D3E; border-bottom: 2px solid #C9A227; padding-bottom: 6px; margin-top: 20px; margin-bottom: 14px; font-size: 16pt; }
-  h3 { color: #2D6A4F; font-size: 13pt; margin-top: 18px; }
-  h4 { color: #2D6A4F; font-size: 12pt; }
-  p { margin: 0 0 10px; text-align: justify; }
-  .toc-list { list-style: none; padding: 0; }
-  .toc-list li { margin: 8px 0; border-bottom: 1px dotted #ddd; padding-bottom: 4px; display: flex; justify-content: space-between; gap: 12px; }
-  .toc-level-2 { padding-left: 20px; font-size: 10pt; }
-  .toc-list a { color: #1B4D3E; text-decoration: none; flex: 1; }
-  .part-divider { text-align: center; padding: 50px 16px; background: #F7F5F0; border-radius: 8px; margin: 16px 0; }
-  .part-label { font-size: 10pt; text-transform: uppercase; letter-spacing: 2px; color: #C9A227; }
-  .part-title { font-size: 20pt; color: #1B4D3E; border: none; margin: 12px 0; }
+  .cover-tos { font-size: 9pt; color: #999; margin-top: 48pt; }
+
+  .copyright-page { padding: 80pt 20pt 40pt; }
+
+  h2 {
+    color: #1B4D3E;
+    border-bottom: 2px solid #C9A227;
+    padding-bottom: 5px;
+    margin: 16px 0 10px;
+    font-size: 16pt;
+    page-break-after: avoid;
+  }
+
+  h3 { color: #2D6A4F; font-size: 13pt; margin: 14px 0 8px; page-break-after: avoid; }
+  h4 { color: #2D6A4F; font-size: 12pt; margin: 12px 0 6px; page-break-after: avoid; }
+
+  p {
+    margin: 0 0 9px;
+    text-align: justify;
+    orphans: 3;
+    widows: 3;
+  }
+
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list li {
+    margin: 6px 0;
+    padding: 2px 0 5px;
+    border-bottom: 1px dotted #ccc;
+    font-size: 10.5pt;
+  }
+
+  .toc-level-2 { padding-left: 16px; font-size: 10pt; }
+  .toc-list a { color: #1B4D3E; text-decoration: none; }
+
+  .part-divider {
+    text-align: center;
+    padding: 40pt 16pt;
+    margin: 12px 0;
+    background: #F7F5F0;
+    page-break-inside: avoid;
+  }
+
+  .part-label {
+    font-size: 10pt;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #C9A227;
+  }
+
+  .part-title { font-size: 18pt; color: #1B4D3E; border: 0; margin: 10px 0; }
   .part-weight { font-size: 10pt; color: #666; }
-  .part-desc { font-size: 10pt; color: #555; max-width: 500px; margin: 12px auto 0; text-align: center; }
+  .part-desc { font-size: 10pt; color: #555; margin: 10px auto 0; max-width: 90%; text-align: center; }
+
   .chapter-title { font-size: 16pt; }
-  .topic-label { font-size: 9pt; color: #888; font-style: italic; margin-bottom: 16px; text-align: left; }
-  blockquote { border-left: 4px solid #C9A227; margin: 16px 0; padding: 8px 16px; background: #f9f7f2; }
-  .callout { padding: 12px 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid; }
+  .topic-label { font-size: 9pt; color: #888; font-style: italic; margin-bottom: 12px; text-align: left; }
+
+  blockquote {
+    border-left: 4px solid #C9A227;
+    margin: 12px 0;
+    padding: 8px 14px;
+    background: #f9f7f2;
+    page-break-inside: avoid;
+  }
+
+  .callout {
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-left: 4px solid;
+    page-break-inside: avoid;
+  }
+
   .callout-note { background: #E8F0EC; border-color: #1B4D3E; }
   .callout-tip { background: #FFF8E7; border-color: #C9A227; }
   .callout-important { background: #E8EEF8; border-color: #2D6A4F; }
   .callout-warning { background: #FDEEEE; border-color: #C0392B; }
-  .footnote { font-size: 9pt; color: #666; border-top: 1px solid #eee; padding-top: 8px; }
-  .divider { border: none; border-top: 2px solid #C9A227; margin: 24px 0; page-break-after: always; }
-  figure { text-align: center; margin: 20px 0; }
-  figcaption { font-size: 9pt; color: #666; margin-top: 8px; font-style: italic; }
-  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt; }
-  th { background: #1B4D3E; color: white; padding: 8px; text-align: left; }
-  td { border: 1px solid #ddd; padding: 8px; }
+
+  .footnote { font-size: 9pt; color: #666; border-top: 1px solid #eee; padding-top: 6px; }
+  .divider { border: 0; border-top: 1px solid #C9A227; margin: 16px 0; }
+
+  figure { margin: 14px 0; text-align: center; page-break-inside: avoid; }
+  figcaption { font-size: 9pt; color: #666; margin-top: 6px; font-style: italic; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
+  th { background: #1B4D3E; color: #fff; padding: 7px; text-align: left; }
+  td { border: 1px solid #ddd; padding: 7px; vertical-align: top; }
   tr:nth-child(even) { background: #f9f9f9; }
-  .citation-ref { font-size: 10pt; color: #444; padding-left: 16px; border-left: 3px solid #ddd; text-align: left; }
-  .bib-entry { font-size: 10pt; text-indent: -20px; padding-left: 20px; margin: 8px 0; text-align: left; }
-  .image-text-layout { display: flex; gap: 16px; align-items: flex-start; margin: 20px 0; }
-  .image-text-layout.layout-left { flex-direction: row; }
-  .image-text-layout.layout-right { flex-direction: row-reverse; }
-  .image-text-layout.layout-top,
-  .image-text-layout.layout-center { flex-direction: column; }
-  .image-text-layout.layout-bottom { flex-direction: column-reverse; }
-  .image-text-layout.layout-center { align-items: center; text-align: center; }
-  .image-text-layout.layout-wrap-left,
-  .image-text-layout.layout-wrap-right { display: block; }
-  .image-text-layout.layout-wrap-left .side-img { float: left; margin: 0 16px 12px 0; }
-  .image-text-layout.layout-wrap-right .side-img { float: right; margin: 0 0 12px 16px; }
-  .image-text-layout.layout-wrap-left::after,
-  .image-text-layout.layout-wrap-right::after { content: ""; display: table; clear: both; }
-  .side-img { object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-  .side-img.img-size-small { width: 120px; max-height: 120px; }
-  .side-img.img-size-medium { width: 180px; max-height: 200px; }
-  .side-img.img-size-large { width: 240px; max-height: 260px; }
-  .side-img.img-size-full { width: 300px; max-height: 320px; }
-  .layout-top .side-img.img-size-small,
-  .layout-bottom .side-img.img-size-small,
-  .layout-center .side-img.img-size-small { width: 45%; max-width: 280px; max-height: 180px; }
-  .layout-top .side-img.img-size-medium,
-  .layout-bottom .side-img.img-size-medium,
-  .layout-center .side-img.img-size-medium { width: 65%; max-width: 400px; max-height: 280px; }
-  .layout-top .side-img.img-size-large,
-  .layout-bottom .side-img.img-size-large,
-  .layout-center .side-img.img-size-large { width: 85%; max-width: 520px; max-height: 380px; }
-  .layout-top .side-img.img-size-full,
-  .layout-bottom .side-img.img-size-full,
-  .layout-center .side-img.img-size-full { width: 100%; max-height: 480px; object-fit: contain; }
-  .layout-wrap-left .side-img.img-size-small,
-  .layout-wrap-right .side-img.img-size-small { width: 28%; min-width: 100px; max-height: 140px; }
-  .layout-wrap-left .side-img.img-size-medium,
-  .layout-wrap-right .side-img.img-size-medium { width: 38%; min-width: 140px; max-height: 200px; }
-  .layout-wrap-left .side-img.img-size-large,
-  .layout-wrap-right .side-img.img-size-large { width: 48%; min-width: 180px; max-height: 260px; }
-  .layout-wrap-left .side-img.img-size-full,
-  .layout-wrap-right .side-img.img-size-full { width: 55%; min-width: 220px; max-height: 320px; }
-  .figure-item { text-align: center; margin: 20px 0; }
-  .figure-item img { border-radius: 8px; object-fit: contain; }
-  .figure-item img.img-size-small { max-width: 40%; max-height: 200px; }
-  .figure-item img.img-size-medium { max-width: 60%; max-height: 300px; }
-  .figure-item img.img-size-large { max-width: 85%; max-height: 420px; }
-  .figure-item img.img-size-full { width: 100%; max-height: 520px; }
-  .side-text { flex: 1; min-width: 0; }
-  .side-text.wrap-text { width: auto; }
-  .side-caption { font-size: 9pt; color: #666; font-style: italic; }
-  .collage-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .collage-img { border-radius: 8px; object-fit: cover; height: 140px; }
-  .collage-img.cols-2 { width: calc(50% - 4px); }
-  .collage-img.cols-3 { width: calc(33.33% - 6px); }
-  .lof-list { list-style: none; padding: 0; }
-  .lof-list li { margin: 6px 0; font-size: 10pt; }
+
+  .citation-ref {
+    font-size: 10pt;
+    color: #444;
+    padding-left: 14px;
+    border-left: 3px solid #ddd;
+    text-align: left;
+  }
+
+  .bib-entry {
+    font-size: 10pt;
+    text-indent: -18px;
+    padding-left: 18px;
+    margin: 6px 0;
+    text-align: left;
+  }
+
+  .imgtext-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    table-layout: fixed;
+    page-break-inside: avoid;
+  }
+
+  .imgtext-table td { vertical-align: top; border: 0; padding: 0; }
+  .imgtext-table td.img-cell { padding-right: 12px; }
+  .imgtext-table td.text-cell { padding-left: 4px; }
+  .imgtext-table.layout-right td.img-cell { padding-right: 0; padding-left: 12px; }
+  .imgtext-table.layout-right td.text-cell { padding-left: 0; padding-right: 4px; }
+
+  .stacked-block { margin: 14px 0; page-break-inside: avoid; }
+  .stacked-block .stacked-img { margin: 8px 0; text-align: center; }
+  .stacked-block .stacked-text { text-align: justify; }
+  .stacked-block.layout-center .stacked-text { text-align: center; }
+
+  .wrap-block { margin: 14px 0; page-break-inside: avoid; }
+  .wrap-block::after { content: ""; display: block; clear: both; }
+  .wrap-block .side-text { text-align: justify; }
+
+  .side-caption { font-size: 9pt; color: #666; font-style: italic; margin-top: 6px; }
+
+  .collage-table { width: 100%; border-collapse: collapse; }
+  .collage-table td { padding: 4px; border: 0; text-align: center; vertical-align: middle; }
+
+  .lof-list { list-style: none; padding: 0; margin: 0; }
+  .lof-list li { margin: 5px 0; font-size: 10pt; }
+
+  .copyright-meta { font-size: 10pt; color: #666; margin-top: 10px; }
+
+  @media print {
+    ${!showRunning ? '.print-header { display: none !important; }' : ''}
+    ${!showPages && !showRunning ? '.print-footer { display: none !important; }' : ''}
+    .chapter, .front-section, .back-section { page-break-inside: auto; }
+    table, blockquote, .callout, figure, .imgtext-table, .stacked-block { page-break-inside: avoid; }
+  }
+
+  @media screen {
+    body {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 16px;
+      background: #f0ede8;
+    }
+
+    .book-content {
+      background: #fff;
+      padding: 32px 36px;
+      box-shadow: 0 1px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .print-header,
+    .print-footer {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .print-footer { margin-top: 18px; }
+  }
 `;
 }
 
@@ -320,25 +344,101 @@ function renderRunningHead(book: BookProject): string {
   const showPages = s.includePageNumbers !== false;
 
   const header = showHeader
-    ? `<div class="print-header">
-        <span class="header-title">${headerTitle}</span>
-        <span class="header-meta">${editionLine}</span>
-      </div>`
+    ? `<div class="print-header"><table><tr>
+        <td class="header-title">${headerTitle}</td>
+        <td class="header-meta">${editionLine}</td>
+      </tr></table></div>`
     : '';
 
-  const pageNum = showPages
-    ? `<span class="footer-center page-number-full"></span>`
-    : '<span class="footer-center"></span>';
+  const pageCell = showPages
+    ? `<td class="footer-center"><span class="page-number-full"></span></td>`
+    : `<td class="footer-center"></td>`;
 
-  const footer = (showHeader || showPages)
-    ? `<div class="print-footer">
-        <span class="footer-left">${footerNote}</span>
-        ${pageNum}
-        <span class="footer-right">${headerTitle}</span>
-      </div>`
-    : '';
+  const footer =
+    showHeader || showPages
+      ? `<div class="print-footer"><table><tr>
+          <td class="footer-left">${footerNote}</td>
+          ${pageCell}
+          <td class="footer-right">${headerTitle}</td>
+        </tr></table></div>`
+      : '';
 
   return header + footer;
+}
+
+function renderPdfImage(
+  uri: string,
+  size: ReturnType<typeof getImageSize>,
+  alt: string
+): string {
+  const maxW = getPdfImageMaxWidth(size);
+  const maxH = getPdfImageMaxHeight(size);
+  return `<img src="${uri}" alt="${escapeHtml(alt)}" style="display:block;max-width:${maxW};max-height:${maxH};width:auto;height:auto;margin:0 auto;" />`;
+}
+
+function renderImageTextContent(block: ContentBlock): string {
+  if (!block.imageUri && !block.text) return '';
+
+  const layout = getImageLayout(block);
+  const size = getImageSize(block);
+  const layoutClass = getLayoutClass(layout);
+  const caption = block.caption
+    ? `<p class="side-caption">${escapeHtml(block.caption)}</p>`
+    : '';
+  const text = `<div class="side-text"><p>${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>${caption}</div>`;
+  const img = block.imageUri ? renderPdfImage(block.imageUri, size, block.caption ?? 'Figure') : '';
+
+  if (isStackedLayout(layout)) {
+    const imageFirst = layout !== 'bottom';
+    return `<div class="stacked-block ${layoutClass}">
+      ${imageFirst && img ? `<div class="stacked-img">${img}</div>` : ''}
+      ${text}
+      ${!imageFirst && img ? `<div class="stacked-img">${img}</div>` : ''}
+    </div>`;
+  }
+
+  if (layout === 'wrap-left' || layout === 'wrap-right') {
+    const floatStyle =
+      layout === 'wrap-left'
+        ? `float:left;margin:0 12px 8px 0;max-width:${getPdfImageCellWidth(size)};`
+        : `float:right;margin:0 0 8px 12px;max-width:${getPdfImageCellWidth(size)};`;
+    const floatedImg = block.imageUri
+      ? `<img src="${block.imageUri}" alt="${escapeHtml(block.caption ?? 'Figure')}" style="display:block;${floatStyle}max-height:${getPdfImageMaxHeight(size)};height:auto;" />`
+      : '';
+    return `<div class="wrap-block ${layoutClass}">${floatedImg}${text}</div>`;
+  }
+
+  const cellWidth = getPdfImageCellWidth(size);
+  const imgCell = `<td class="img-cell" width="${cellWidth}" valign="top">${img}</td>`;
+  const textCell = `<td class="text-cell" valign="top">${text}</td>`;
+
+  return `<table class="imgtext-table ${layoutClass}" cellpadding="0" cellspacing="0" border="0">
+    <tr>${layout === 'right' ? textCell + imgCell : imgCell + textCell}</tr>
+  </table>`;
+}
+
+function renderCollageContent(block: ContentBlock): string {
+  const uris = block.imageUris ?? [];
+  if (uris.length === 0) return '';
+  const cols = block.collageColumns ?? 2;
+  const cellWidth = cols === 2 ? '50%' : '33%';
+  const rows: string[] = [];
+
+  for (let i = 0; i < uris.length; i += cols) {
+    const slice = uris.slice(i, i + cols);
+    const cells = slice
+      .map(
+        (uri) =>
+          `<td width="${cellWidth}" align="center" valign="middle"><img src="${uri}" alt="Collage" style="max-width:100%;max-height:150px;height:auto;display:block;margin:0 auto;" /></td>`
+      )
+      .join('');
+    const padding = cols - slice.length;
+    const emptyCells = Array.from({ length: padding }, () => `<td width="${cellWidth}"></td>`).join('');
+    rows.push(`<tr>${cells}${emptyCells}</tr>`);
+  }
+
+  const cap = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : '';
+  return `<figure class="figure-item"><table class="collage-table" cellpadding="4" cellspacing="0" border="0">${rows.join('')}</table>${cap}</figure>`;
 }
 
 function escapeHtml(text: string): string {
@@ -378,37 +478,13 @@ function renderBlock(block: ContentBlock, citations: Map<string, Citation>): str
       return '<hr class="divider"/>';
     case 'image': {
       if (!block.imageUri) return '';
-      const sizeClass = getImageSizeClass(getImageSize(block));
-      return `<figure class="figure-item"><img src="${block.imageUri}" class="${sizeClass}" alt="${escapeHtml(block.caption ?? 'Figure')}"/><figcaption>${escapeHtml(block.caption ?? '')}</figcaption></figure>`;
+      const size = getImageSize(block);
+      return `<figure class="figure-item">${renderPdfImage(block.imageUri, size, block.caption ?? 'Figure')}<figcaption>${escapeHtml(block.caption ?? '')}</figcaption></figure>`;
     }
-    case 'image-text': {
-      if (!block.imageUri && !block.text) return '';
-      const layout = getImageLayout(block);
-      const sizeClass = getImageSizeClass(getImageSize(block));
-      const layoutClass = getLayoutClass(layout);
-      const img = block.imageUri
-        ? `<img src="${block.imageUri}" class="side-img ${sizeClass}" alt="${escapeHtml(block.caption ?? 'Figure')}"/>`
-        : '';
-      const wrapText = isStackedLayout(layout) ? '' : layout.startsWith('wrap') ? ' wrap-text' : '';
-      const text = `<div class="side-text${wrapText}"><p>${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>${block.caption ? `<p class="side-caption">${escapeHtml(block.caption)}</p>` : ''}</div>`;
-      const isTextFirst = layout === 'right' || layout === 'bottom';
-      const inner = layout.startsWith('wrap')
-        ? img + text
-        : isTextFirst
-          ? text + img
-          : img + text;
-      return `<div class="image-text-layout ${layoutClass}">${inner}</div>`;
-    }
-    case 'image-collage': {
-      const uris = block.imageUris ?? [];
-      if (uris.length === 0) return '';
-      const cols = block.collageColumns ?? 2;
-      const imgs = uris
-        .map((uri) => `<img src="${uri}" class="collage-img cols-${cols}" alt="Collage"/>`)
-        .join('');
-      const cap = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : '';
-      return `<figure class="collage figure-item"><div class="collage-grid cols-${cols}">${imgs}</div>${cap}</figure>`;
-    }
+    case 'image-text':
+      return renderImageTextContent(block);
+    case 'image-collage':
+      return renderCollageContent(block);
     case 'table': {
       const rows = block.rows ?? [];
       if (rows.length === 0) return '';
@@ -710,7 +786,7 @@ export function buildBookHtml(
 <html>
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=${getPageDimensions(book).width}, initial-scale=1.0, maximum-scale=1.0"/>
   <title>${escapeHtml(book.title)}</title>
   <style>${buildBookStyles(book)}</style>
 </head>
@@ -734,6 +810,7 @@ export async function exportBookToPdf(
     html,
     width: page.width,
     height: page.height,
+    textZoom: 100,
     base64: false,
   });
   return uri;

@@ -96,3 +96,44 @@ export function getImageSizeClass(size: ImageSize): string {
 export function getLayoutClass(layout: ImageLayout): string {
   return `layout-${layout}`;
 }
+
+/** Table cell width for side-by-side PDF layouts */
+export function getPdfImageCellWidth(size: ImageSize): string {
+  switch (size) {
+    case 'small':
+      return '28%';
+    case 'large':
+      return '42%';
+    case 'full':
+      return '48%';
+    default:
+      return '35%';
+  }
+}
+
+/** Max width for stacked / standalone images in PDF */
+export function getPdfImageMaxWidth(size: ImageSize): string {
+  switch (size) {
+    case 'small':
+      return '45%';
+    case 'large':
+      return '88%';
+    case 'full':
+      return '100%';
+    default:
+      return '68%';
+  }
+}
+
+export function getPdfImageMaxHeight(size: ImageSize): string {
+  switch (size) {
+    case 'small':
+      return '160px';
+    case 'large':
+      return '360px';
+    case 'full':
+      return '460px';
+    default:
+      return '260px';
+  }
+}
