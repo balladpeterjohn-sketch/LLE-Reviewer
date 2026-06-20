@@ -4,6 +4,13 @@ import { TOS_SUBJECTS, findSubject, findTopic } from '../data/tosSubjects';
 import { BookProject, Citation, ContentBlock, ReadingMaterial } from '../types';
 import { normalizeBook } from './bookDefaults';
 import { formatCitation } from './citation';
+import {
+  getImageLayout,
+  getImageSize,
+  getImageSizeClass,
+  getLayoutClass,
+  isStackedLayout,
+} from './imageLayout';
 
 const PAGE_DIMENSIONS = {
   a4: { width: 595, height: 842, cssSize: 'A4' },
@@ -247,8 +254,51 @@ function buildBookStyles(book: BookProject): string {
   .citation-ref { font-size: 10pt; color: #444; padding-left: 16px; border-left: 3px solid #ddd; text-align: left; }
   .bib-entry { font-size: 10pt; text-indent: -20px; padding-left: 20px; margin: 8px 0; text-align: left; }
   .image-text-layout { display: flex; gap: 16px; align-items: flex-start; margin: 20px 0; }
-  .side-img { width: 180px; max-height: 200px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-  .side-text { flex: 1; }
+  .image-text-layout.layout-left { flex-direction: row; }
+  .image-text-layout.layout-right { flex-direction: row-reverse; }
+  .image-text-layout.layout-top,
+  .image-text-layout.layout-center { flex-direction: column; }
+  .image-text-layout.layout-bottom { flex-direction: column-reverse; }
+  .image-text-layout.layout-center { align-items: center; text-align: center; }
+  .image-text-layout.layout-wrap-left,
+  .image-text-layout.layout-wrap-right { display: block; }
+  .image-text-layout.layout-wrap-left .side-img { float: left; margin: 0 16px 12px 0; }
+  .image-text-layout.layout-wrap-right .side-img { float: right; margin: 0 0 12px 16px; }
+  .image-text-layout.layout-wrap-left::after,
+  .image-text-layout.layout-wrap-right::after { content: ""; display: table; clear: both; }
+  .side-img { object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .side-img.img-size-small { width: 120px; max-height: 120px; }
+  .side-img.img-size-medium { width: 180px; max-height: 200px; }
+  .side-img.img-size-large { width: 240px; max-height: 260px; }
+  .side-img.img-size-full { width: 300px; max-height: 320px; }
+  .layout-top .side-img.img-size-small,
+  .layout-bottom .side-img.img-size-small,
+  .layout-center .side-img.img-size-small { width: 45%; max-width: 280px; max-height: 180px; }
+  .layout-top .side-img.img-size-medium,
+  .layout-bottom .side-img.img-size-medium,
+  .layout-center .side-img.img-size-medium { width: 65%; max-width: 400px; max-height: 280px; }
+  .layout-top .side-img.img-size-large,
+  .layout-bottom .side-img.img-size-large,
+  .layout-center .side-img.img-size-large { width: 85%; max-width: 520px; max-height: 380px; }
+  .layout-top .side-img.img-size-full,
+  .layout-bottom .side-img.img-size-full,
+  .layout-center .side-img.img-size-full { width: 100%; max-height: 480px; object-fit: contain; }
+  .layout-wrap-left .side-img.img-size-small,
+  .layout-wrap-right .side-img.img-size-small { width: 28%; min-width: 100px; max-height: 140px; }
+  .layout-wrap-left .side-img.img-size-medium,
+  .layout-wrap-right .side-img.img-size-medium { width: 38%; min-width: 140px; max-height: 200px; }
+  .layout-wrap-left .side-img.img-size-large,
+  .layout-wrap-right .side-img.img-size-large { width: 48%; min-width: 180px; max-height: 260px; }
+  .layout-wrap-left .side-img.img-size-full,
+  .layout-wrap-right .side-img.img-size-full { width: 55%; min-width: 220px; max-height: 320px; }
+  .figure-item { text-align: center; margin: 20px 0; }
+  .figure-item img { border-radius: 8px; object-fit: contain; }
+  .figure-item img.img-size-small { max-width: 40%; max-height: 200px; }
+  .figure-item img.img-size-medium { max-width: 60%; max-height: 300px; }
+  .figure-item img.img-size-large { max-width: 85%; max-height: 420px; }
+  .figure-item img.img-size-full { width: 100%; max-height: 520px; }
+  .side-text { flex: 1; min-width: 0; }
+  .side-text.wrap-text { width: auto; }
   .side-caption { font-size: 9pt; color: #666; font-style: italic; }
   .collage-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
   .collage-img { border-radius: 8px; object-fit: cover; height: 140px; }
@@ -326,18 +376,28 @@ function renderBlock(block: ContentBlock, citations: Map<string, Citation>): str
       return `<p class="footnote"><sup>*</sup> ${escapeHtml(block.text ?? '')}</p>`;
     case 'divider':
       return '<hr class="divider"/>';
-    case 'image':
-      return block.imageUri
-        ? `<figure class="figure-item"><img src="${block.imageUri}" alt="${escapeHtml(block.caption ?? 'Figure')}"/><figcaption>${escapeHtml(block.caption ?? '')}</figcaption></figure>`
-        : '';
+    case 'image': {
+      if (!block.imageUri) return '';
+      const sizeClass = getImageSizeClass(getImageSize(block));
+      return `<figure class="figure-item"><img src="${block.imageUri}" class="${sizeClass}" alt="${escapeHtml(block.caption ?? 'Figure')}"/><figcaption>${escapeHtml(block.caption ?? '')}</figcaption></figure>`;
+    }
     case 'image-text': {
       if (!block.imageUri && !block.text) return '';
-      const imageLeft = (block.imagePosition ?? 'left') === 'left';
+      const layout = getImageLayout(block);
+      const sizeClass = getImageSizeClass(getImageSize(block));
+      const layoutClass = getLayoutClass(layout);
       const img = block.imageUri
-        ? `<img src="${block.imageUri}" class="side-img" alt="${escapeHtml(block.caption ?? 'Figure')}"/>`
+        ? `<img src="${block.imageUri}" class="side-img ${sizeClass}" alt="${escapeHtml(block.caption ?? 'Figure')}"/>`
         : '';
-      const text = `<div class="side-text"><p>${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>${block.caption ? `<p class="side-caption">${escapeHtml(block.caption)}</p>` : ''}</div>`;
-      return `<div class="image-text-layout">${imageLeft ? img + text : text + img}</div>`;
+      const wrapText = isStackedLayout(layout) ? '' : layout.startsWith('wrap') ? ' wrap-text' : '';
+      const text = `<div class="side-text${wrapText}"><p>${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>${block.caption ? `<p class="side-caption">${escapeHtml(block.caption)}</p>` : ''}</div>`;
+      const isTextFirst = layout === 'right' || layout === 'bottom';
+      const inner = layout.startsWith('wrap')
+        ? img + text
+        : isTextFirst
+          ? text + img
+          : img + text;
+      return `<div class="image-text-layout ${layoutClass}">${inner}</div>`;
     }
     case 'image-collage': {
       const uris = block.imageUris ?? [];

@@ -52,6 +52,15 @@ export interface AppendixEntry {
 }
 
 export type ImagePosition = 'left' | 'right';
+export type ImageSize = 'small' | 'medium' | 'large' | 'full';
+export type ImageLayout =
+  | 'left'
+  | 'right'
+  | 'top'
+  | 'bottom'
+  | 'wrap-left'
+  | 'wrap-right'
+  | 'center';
 export type CollageColumns = 2 | 3;
 
 export interface TableCell {
@@ -65,7 +74,10 @@ export interface ContentBlock {
   level?: 1 | 2 | 3;
   imageUri?: string;
   imageUris?: string[];
+  /** @deprecated use imageLayout */
   imagePosition?: ImagePosition;
+  imageLayout?: ImageLayout;
+  imageSize?: ImageSize;
   collageColumns?: CollageColumns;
   caption?: string;
   rows?: TableCell[][];

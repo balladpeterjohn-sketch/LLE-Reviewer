@@ -15,8 +15,20 @@ import {
 import { generateId } from '../utils/id';
 import { getCitations } from '../services/storage';
 import { colors, spacing } from '../theme';
-import { Citation, ContentBlock } from '../types';
+import { Citation, ContentBlock, ImageLayout, ImageSize } from '../types';
 import { formatCitation } from '../utils/citation';
+import {
+  IMAGE_LAYOUT_LABELS,
+  IMAGE_LAYOUTS,
+  IMAGE_SIZE_LABELS,
+  IMAGE_SIZES,
+  getImageLayout,
+  getImageSize,
+  getNativeFullImageStyle,
+  getNativeSideImageSize,
+  getNativeStackedImageStyle,
+  isStackedLayout,
+} from '../utils/imageLayout';
 import { Button } from './ui';
 
 interface ContentEditorProps {
@@ -41,9 +53,13 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
       block.text = '';
       block.level = 2;
     }
+    if (type === 'image') {
+      block.imageSize = 'medium';
+    }
     if (type === 'image-text') {
       block.text = '';
-      block.imagePosition = 'left';
+      block.imageLayout = 'left';
+      block.imageSize = 'medium';
     }
     if (type === 'image-collage') {
       block.imageUris = [];
@@ -284,8 +300,18 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
 
           {block.type === 'image' && (
             <View>
+              <Text style={styles.controlLabel}>Image size</Text>
+              <OptionChips
+                options={IMAGE_SIZES.map((s) => ({ value: s, label: IMAGE_SIZE_LABELS[s] }))}
+                selected={getImageSize(block)}
+                onSelect={(size) => updateBlock(index, { imageSize: size as ImageSize })}
+              />
               {block.imageUri ? (
-                <Image source={{ uri: block.imageUri }} style={styles.image} resizeMode="contain" />
+                <Image
+                  source={{ uri: block.imageUri }}
+                  style={[styles.image, getNativeFullImageStyle(getImageSize(block))]}
+                  resizeMode="contain"
+                />
               ) : (
                 <Pressable style={styles.imagePlaceholder} onPress={() => pickImage(index)}>
                   <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
@@ -306,45 +332,27 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
 
           {block.type === 'image-text' && (
             <View>
-              <View style={styles.positionRow}>
-                <Text style={styles.positionLabel}>Image position:</Text>
-                {(['left', 'right'] as const).map((pos) => (
-                  <Pressable
-                    key={pos}
-                    style={[
-                      styles.levelChip,
-                      block.imagePosition === pos && styles.levelChipActive,
-                    ]}
-                    onPress={() => updateBlock(index, { imagePosition: pos })}
-                  >
-                    <Text
-                      style={[
-                        styles.levelChipText,
-                        block.imagePosition === pos && styles.levelChipTextActive,
-                      ]}
-                    >
-                      {pos === 'left' ? 'Left' : 'Right'}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              <View style={styles.imageTextPreview}>
-                {block.imageUri ? (
-                  <Image source={{ uri: block.imageUri }} style={styles.sidePreviewImage} resizeMode="cover" />
-                ) : (
-                  <Pressable style={styles.sidePreviewImage} onPress={() => pickImage(index)}>
-                    <Ionicons name="image-outline" size={28} color={colors.textSecondary} />
-                  </Pressable>
-                )}
-                <TextInput
-                  style={[styles.textArea, { flex: 1, minHeight: 120 }]}
-                  multiline
-                  placeholder="Text beside the image..."
-                  value={block.text}
-                  onChangeText={(text) => updateBlock(index, { text })}
-                  textAlignVertical="top"
+              <Text style={styles.controlLabel}>Layout</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionScroll}>
+                <OptionChips
+                  options={IMAGE_LAYOUTS.map((l) => ({ value: l, label: IMAGE_LAYOUT_LABELS[l] }))}
+                  selected={getImageLayout(block)}
+                  onSelect={(layout) =>
+                    updateBlock(index, { imageLayout: layout as ImageLayout })
+                  }
                 />
-              </View>
+              </ScrollView>
+              <Text style={styles.controlLabel}>Image size</Text>
+              <OptionChips
+                options={IMAGE_SIZES.map((s) => ({ value: s, label: IMAGE_SIZE_LABELS[s] }))}
+                selected={getImageSize(block)}
+                onSelect={(size) => updateBlock(index, { imageSize: size as ImageSize })}
+              />
+              <ImageTextEditorPreview
+                block={block}
+                onPickImage={() => pickImage(index)}
+                onChangeText={(text) => updateBlock(index, { text })}
+              />
               <Button title="Change Image" onPress={() => pickImage(index)} variant="outline" />
               <TextInput
                 style={styles.captionInput}
@@ -458,7 +466,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
         <AddChip icon="text" label="Text" onPress={() => addBlock('paragraph')} />
         <AddChip icon="text-outline" label="Heading" onPress={() => addBlock('heading')} />
         <AddChip icon="image" label="Image" onPress={() => addBlock('image')} />
-        <AddChip icon="albums" label="Side by Side" onPress={() => addBlock('image-text')} />
+        <AddChip icon="albums" label="Image + Text" onPress={() => addBlock('image-text')} />
         <AddChip icon="grid" label="Collage" onPress={() => addBlock('image-collage')} />
         <AddChip icon="grid-outline" label="Table" onPress={() => addBlock('table')} />
         <AddChip icon="chatbox-ellipses" label="Quote" onPress={() => addBlock('quote')} />
@@ -494,6 +502,118 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+function OptionChips({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: { value: string; label: string }[];
+  selected: string;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <View style={styles.optionChips}>
+      {options.map((opt) => (
+        <Pressable
+          key={opt.value}
+          style={[styles.levelChip, selected === opt.value && styles.levelChipActive]}
+          onPress={() => onSelect(opt.value)}
+        >
+          <Text
+            style={[
+              styles.levelChipText,
+              selected === opt.value && styles.levelChipTextActive,
+            ]}
+          >
+            {opt.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function ImageTextEditorPreview({
+  block,
+  onPickImage,
+  onChangeText,
+}: {
+  block: ContentBlock;
+  onPickImage: () => void;
+  onChangeText: (text: string) => void;
+}) {
+  const layout = getImageLayout(block);
+  const size = getImageSize(block);
+  const stacked = isStackedLayout(layout);
+  const imageStyle = stacked
+    ? getNativeStackedImageStyle(size)
+    : getNativeSideImageSize(size);
+
+  const imageNode = block.imageUri ? (
+    <Image
+      source={{ uri: block.imageUri }}
+      style={[
+        stacked ? styles.stackedPreviewImage : styles.sidePreviewImage,
+        imageStyle,
+      ]}
+      resizeMode="cover"
+    />
+  ) : (
+    <Pressable
+      style={[
+        stacked ? styles.stackedPreviewImage : styles.sidePreviewImage,
+        imageStyle,
+      ]}
+      onPress={onPickImage}
+    >
+      <Ionicons name="image-outline" size={28} color={colors.textSecondary} />
+    </Pressable>
+  );
+
+  const textNode = (
+    <TextInput
+      style={[
+        styles.textArea,
+        stacked ? styles.stackedTextArea : { flex: 1, minHeight: 120 },
+      ]}
+      multiline
+      placeholder="Text with the image..."
+      value={block.text}
+      onChangeText={onChangeText}
+      textAlignVertical="top"
+    />
+  );
+
+  const row =
+    layout === 'right' || layout === 'wrap-right' ? (
+      <>
+        {textNode}
+        {imageNode}
+      </>
+    ) : layout === 'bottom' ? (
+      <>
+        {textNode}
+        {imageNode}
+      </>
+    ) : (
+      <>
+        {imageNode}
+        {textNode}
+      </>
+    );
+
+  return (
+    <View
+      style={[
+        stacked ? styles.stackedPreview : styles.imageTextPreview,
+        layout === 'center' && styles.centeredPreview,
+      ]}
+    >
+      {row}
     </View>
   );
 }
@@ -591,7 +711,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
-  image: { width: '100%', height: 200, borderRadius: 8 },
+  controlLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: spacing.xs },
+  optionScroll: { flexGrow: 0, marginBottom: spacing.sm },
+  optionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  image: { borderRadius: 8, backgroundColor: '#EEE' },
   imagePlaceholder: {
     height: 150,
     borderWidth: 2,
@@ -664,9 +787,9 @@ const styles = StyleSheet.create({
   positionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   positionLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
   imageTextPreview: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  stackedPreview: { gap: spacing.sm },
+  centeredPreview: { alignItems: 'center' },
   sidePreviewImage: {
-    width: 100,
-    height: 100,
     borderRadius: 8,
     backgroundColor: '#EEE',
     alignItems: 'center',
@@ -674,6 +797,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  stackedPreviewImage: {
+    borderRadius: 8,
+    backgroundColor: '#EEE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  stackedTextArea: { minHeight: 100, width: '100%' },
   collageEditor: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   collageThumbWrap: { position: 'relative' },
   collageThumb: { width: 90, height: 90, borderRadius: 8 },

@@ -4,6 +4,14 @@ import { getCitations } from '../services/storage';
 import { colors, spacing } from '../theme';
 import { CalloutVariant, Citation, ContentBlock } from '../types';
 import { formatCitation } from '../utils/citation';
+import {
+  getImageLayout,
+  getImageSize,
+  getNativeFullImageStyle,
+  getNativeSideImageSize,
+  getNativeStackedImageStyle,
+  isStackedLayout,
+} from '../utils/imageLayout';
 
 interface ContentRendererProps {
   blocks: ContentBlock[];
@@ -55,38 +63,67 @@ function BlockView({
     case 'image':
       return block.imageUri ? (
         <View style={styles.figure}>
-          <Image source={{ uri: block.imageUri }} style={styles.fullImage} resizeMode="contain" />
+          <Image
+            source={{ uri: block.imageUri }}
+            style={[styles.fullImage, getNativeFullImageStyle(getImageSize(block))]}
+            resizeMode="contain"
+          />
           {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
         </View>
       ) : null;
     case 'image-text': {
-      const imageLeft = (block.imagePosition ?? 'left') === 'left';
+      const layout = getImageLayout(block);
+      const size = getImageSize(block);
+      const stacked = isStackedLayout(layout);
+      const imageStyle = stacked
+        ? getNativeStackedImageStyle(size)
+        : getNativeSideImageSize(size);
+
       const image = block.imageUri ? (
-        <Image source={{ uri: block.imageUri }} style={styles.sideImage} resizeMode="cover" />
+        <Image
+          source={{ uri: block.imageUri }}
+          style={[stacked ? styles.stackedImage : styles.sideImage, imageStyle]}
+          resizeMode="cover"
+        />
       ) : (
-        <View style={[styles.sideImage, styles.imagePlaceholder]}>
+        <View style={[stacked ? styles.stackedImage : styles.sideImage, imageStyle, styles.imagePlaceholder]}>
           <Text style={styles.placeholderLabel}>No image</Text>
         </View>
       );
       const text = (
-        <View style={styles.sideTextWrap}>
+        <View style={[styles.sideTextWrap, layout === 'center' && styles.centerTextWrap]}>
           <Text style={styles.paragraph}>{block.text || ''}</Text>
           {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
         </View>
       );
+
+      const content =
+        layout === 'right' || layout === 'wrap-right' ? (
+          <>
+            {text}
+            {image}
+          </>
+        ) : layout === 'bottom' ? (
+          <>
+            {text}
+            {image}
+          </>
+        ) : (
+          <>
+            {image}
+            {text}
+          </>
+        );
+
       return (
-        <View style={[styles.imageTextRow, compact && styles.imageTextRowCompact]}>
-          {imageLeft ? (
-            <>
-              {image}
-              {text}
-            </>
-          ) : (
-            <>
-              {text}
-              {image}
-            </>
-          )}
+        <View
+          style={[
+            stacked ? styles.stackedLayout : styles.imageTextRow,
+            compact && !stacked && styles.imageTextRowCompact,
+            layout === 'center' && styles.centeredLayout,
+          ]}
+        >
+          {content}
         </View>
       );
     }
@@ -194,21 +231,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   quoteText: { fontSize: 15, fontStyle: 'italic', lineHeight: 22, color: colors.text },
-  figure: { gap: spacing.sm },
-  fullImage: { width: '100%', height: 220, borderRadius: 10, backgroundColor: '#EEE' },
+  figure: { gap: spacing.sm, alignItems: 'center' },
+  fullImage: { borderRadius: 10, backgroundColor: '#EEE' },
   imageTextRow: {
     flexDirection: 'row',
     gap: spacing.md,
     alignItems: 'flex-start',
   },
   imageTextRowCompact: { flexDirection: 'column' },
+  stackedLayout: { gap: spacing.md },
+  centeredLayout: { alignItems: 'center' },
   sideImage: {
-    width: 140,
-    height: 140,
+    borderRadius: 10,
+    backgroundColor: '#EEE',
+  },
+  stackedImage: {
     borderRadius: 10,
     backgroundColor: '#EEE',
   },
   sideTextWrap: { flex: 1, gap: spacing.sm },
+  centerTextWrap: { alignItems: 'center' },
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
   placeholderLabel: { fontSize: 12, color: colors.textSecondary },
   collageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
