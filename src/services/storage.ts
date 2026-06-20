@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
+import { createEmptyBook, normalizeBook } from '../utils/bookDefaults';
 import {
   AppData,
   BookProject,
@@ -139,20 +140,26 @@ export async function deleteCitation(id: string): Promise<void> {
 
 export async function getBooks(): Promise<BookProject[]> {
   const data = await loadData();
-  return data.books.sort(
+  return data.books.map(normalizeBook).sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 }
 
 export async function getBook(id: string): Promise<BookProject | undefined> {
   const data = await loadData();
-  return data.books.find((b) => b.id === id);
+  const book = data.books.find((b) => b.id === id);
+  return book ? normalizeBook(book) : undefined;
 }
 
 export async function saveBook(book: BookProject): Promise<BookProject> {
   const data = await loadData();
-  const index = data.books.findIndex((b) => b.id === book.id);
-  const updated = { ...book, updatedAt: new Date().toISOString() };
+  const normalized = normalizeBook(book);
+  const index = data.books.findIndex((b) => b.id === normalized.id);
+  const updated = {
+    ...normalized,
+    includeBibliography: normalized.settings.includeBibliography,
+    updatedAt: new Date().toISOString(),
+  };
   if (index >= 0) {
     data.books[index] = updated;
   } else {
@@ -167,12 +174,8 @@ export async function createBook(
 ): Promise<BookProject> {
   const now = new Date().toISOString();
   const book: BookProject = {
+    ...createEmptyBook(partial),
     id: generateId(),
-    title: partial.title,
-    subtitle: partial.subtitle,
-    author: partial.author,
-    sections: [],
-    includeBibliography: true,
     createdAt: now,
     updatedAt: now,
   };
