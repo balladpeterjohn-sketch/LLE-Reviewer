@@ -37,7 +37,8 @@
         {
           "photosPermission": "Allow LLE Reviewer to access your photos for reading materials."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},
