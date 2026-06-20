@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="citation/[id]" options={{ title: 'Edit Citation' }} />
         <Stack.Screen name="citation/new" options={{ title: 'New Citation' }} />
         <Stack.Screen name="book/[id]" options={{ title: 'Compile Book' }} />
+        <Stack.Screen name="book/[id]/settings" options={{ title: 'Book Structure' }} />
         <Stack.Screen name="book/[id]/preview" options={{ headerShown: false }} />
         <Stack.Screen name="book/new" options={{ title: 'New Book' }} />
         <Stack.Screen name="tos/[subjectId]" options={{ title: 'TOS Subject' }} />

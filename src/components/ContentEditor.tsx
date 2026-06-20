@@ -49,6 +49,11 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
       block.imageUris = [];
       block.collageColumns = 2;
     }
+    if (type === 'callout') {
+      block.text = '';
+      block.calloutVariant = 'note';
+    }
+    if (type === 'footnote') block.text = '';
     if (type === 'table') {
       block.rows = [
         [{ value: 'Column 1' }, { value: 'Column 2' }],
@@ -183,17 +188,66 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
             </View>
           </View>
 
-          {(block.type === 'paragraph' || block.type === 'quote') && (
+          {(block.type === 'paragraph' || block.type === 'quote' || block.type === 'footnote') && (
             <TextInput
-              style={[styles.textArea, block.type === 'quote' && styles.quoteInput]}
+              style={[
+                styles.textArea,
+                block.type === 'quote' && styles.quoteInput,
+                block.type === 'footnote' && styles.footnoteInput,
+              ]}
               multiline
               placeholder={
-                block.type === 'quote' ? 'Enter quoted text...' : 'Write your reading material...'
+                block.type === 'quote'
+                  ? 'Enter quoted text...'
+                  : block.type === 'footnote'
+                    ? 'Footnote text...'
+                    : 'Write your reading material...'
               }
               value={block.text}
               onChangeText={(text) => updateBlock(index, { text })}
               textAlignVertical="top"
             />
+          )}
+
+          {block.type === 'callout' && (
+            <View>
+              <View style={styles.headingLevels}>
+                {(['note', 'tip', 'important', 'warning'] as const).map((variant) => (
+                  <Pressable
+                    key={variant}
+                    style={[
+                      styles.levelChip,
+                      block.calloutVariant === variant && styles.levelChipActive,
+                    ]}
+                    onPress={() => updateBlock(index, { calloutVariant: variant })}
+                  >
+                    <Text
+                      style={[
+                        styles.levelChipText,
+                        block.calloutVariant === variant && styles.levelChipTextActive,
+                      ]}
+                    >
+                      {variant}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <TextInput
+                style={styles.textArea}
+                multiline
+                placeholder="Callout content (note, tip, important info)..."
+                value={block.text}
+                onChangeText={(text) => updateBlock(index, { text })}
+                textAlignVertical="top"
+              />
+            </View>
+          )}
+
+          {block.type === 'divider' && (
+            <View style={styles.dividerPreview}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerLabel}>Section divider (page break in book)</Text>
+            </View>
           )}
 
           {block.type === 'heading' && (
@@ -408,6 +462,9 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
         <AddChip icon="grid" label="Collage" onPress={() => addBlock('image-collage')} />
         <AddChip icon="grid-outline" label="Table" onPress={() => addBlock('table')} />
         <AddChip icon="chatbox-ellipses" label="Quote" onPress={() => addBlock('quote')} />
+        <AddChip icon="information-circle" label="Callout" onPress={() => addBlock('callout')} />
+        <AddChip icon="receipt" label="Footnote" onPress={() => addBlock('footnote')} />
+        <AddChip icon="remove" label="Divider" onPress={() => addBlock('divider')} />
         <AddChip icon="book" label="Citation" onPress={() => addBlock('citation')} />
       </ScrollView>
 
@@ -507,6 +564,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.accent,
     fontStyle: 'italic',
+  },
+  footnoteInput: {
+    fontSize: 13,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: '#FAFAFA',
   },
   headingLevels: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   levelChip: {
@@ -626,4 +689,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
   },
+  dividerPreview: { alignItems: 'center', padding: spacing.md },
+  dividerLine: { width: '100%', height: 2, backgroundColor: colors.accent, marginBottom: spacing.sm },
+  dividerLabel: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
 });

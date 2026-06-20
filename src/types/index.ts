@@ -28,7 +28,28 @@ export type ContentBlockType =
   | 'image-collage'
   | 'table'
   | 'quote'
-  | 'citation';
+  | 'citation'
+  | 'callout'
+  | 'footnote'
+  | 'divider';
+
+export type CalloutVariant = 'note' | 'tip' | 'important' | 'warning';
+
+export interface AbbreviationEntry {
+  abbr: string;
+  meaning: string;
+}
+
+export interface GlossaryEntry {
+  term: string;
+  definition: string;
+}
+
+export interface AppendixEntry {
+  id: string;
+  title: string;
+  content: string;
+}
 
 export type ImagePosition = 'left' | 'right';
 export type CollageColumns = 2 | 3;
@@ -49,6 +70,7 @@ export interface ContentBlock {
   caption?: string;
   rows?: TableCell[][];
   citationId?: string;
+  calloutVariant?: CalloutVariant;
 }
 
 export interface ReadingMaterial {
@@ -68,13 +90,49 @@ export interface BookSection {
   order: number;
 }
 
+export interface BookFrontMatter {
+  dedication?: string;
+  foreword?: string;
+  preface?: string;
+  acknowledgments?: string;
+  introduction?: string;
+  abbreviations: AbbreviationEntry[];
+}
+
+export interface BookBackMatter {
+  appendices: AppendixEntry[];
+  glossary: GlossaryEntry[];
+  aboutAuthor?: string;
+}
+
+export interface BookSettings {
+  edition?: string;
+  year?: string;
+  publisher?: string;
+  copyrightNotice?: string;
+  includeTitlePage: boolean;
+  includeCopyrightPage: boolean;
+  includeTableOfContents: boolean;
+  includeTosOverview: boolean;
+  includeListOfFigures: boolean;
+  groupBySubject: boolean;
+  numberChapters: boolean;
+  includeBibliography: boolean;
+  includeGlossary: boolean;
+  includeAboutAuthor: boolean;
+}
+
 export interface BookProject {
   id: string;
   title: string;
   subtitle?: string;
   author: string;
   sections: BookSection[];
+  /** @deprecated use settings.includeBibliography */
   includeBibliography: boolean;
+  frontMatter: BookFrontMatter;
+  backMatter: BookBackMatter;
+  settings: BookSettings;
   createdAt: string;
   updatedAt: string;
 }

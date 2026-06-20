@@ -2,7 +2,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { getCitations } from '../services/storage';
 import { colors, spacing } from '../theme';
-import { Citation, ContentBlock } from '../types';
+import { CalloutVariant, Citation, ContentBlock } from '../types';
 import { formatCitation } from '../utils/citation';
 
 interface ContentRendererProps {
@@ -120,6 +120,31 @@ function BlockView({
       if (!citation) return null;
       return <Text style={styles.citation}>{formatCitation(citation)}</Text>;
     }
+    case 'callout': {
+      const variant = block.calloutVariant ?? 'note';
+      const label = variant.charAt(0).toUpperCase() + variant.slice(1);
+      return (
+        <View style={[styles.callout, calloutStyles[variant]]}>
+          <Text style={styles.calloutLabel}>{label}</Text>
+          <Text style={styles.calloutText}>{block.text || ''}</Text>
+        </View>
+      );
+    }
+    case 'footnote':
+      return (
+        <View style={styles.footnote}>
+          <Text style={styles.footnoteText}>
+            <Text style={styles.footnoteMark}>* </Text>
+            {block.text || ''}
+          </Text>
+        </View>
+      );
+    case 'divider':
+      return (
+        <View style={styles.dividerWrap}>
+          <View style={styles.dividerLine} />
+        </View>
+      );
     default:
       return null;
   }
@@ -149,6 +174,13 @@ function TableView({ rows }: { rows: { value: string }[][] }) {
     </View>
   );
 }
+
+const calloutStyles: Record<CalloutVariant, { backgroundColor: string; borderLeftColor: string }> = {
+  note: { backgroundColor: '#E8F0EC', borderLeftColor: colors.primary },
+  tip: { backgroundColor: '#FFF8E7', borderLeftColor: colors.accent },
+  important: { backgroundColor: '#E8EEF8', borderLeftColor: '#2D6A4F' },
+  warning: { backgroundColor: '#FDEEEE', borderLeftColor: colors.danger },
+};
 
 const styles = StyleSheet.create({
   container: { gap: spacing.md },
@@ -210,4 +242,22 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.border,
   },
+  callout: {
+    borderLeftWidth: 4,
+    borderRadius: 8,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  calloutLabel: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  calloutText: { fontSize: 14, lineHeight: 22, color: colors.text },
+  footnote: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  footnoteMark: { fontSize: 12, fontWeight: '700', color: colors.accent },
+  footnoteText: { fontSize: 12, lineHeight: 18, color: colors.textSecondary },
+  dividerWrap: { paddingVertical: spacing.md },
+  dividerLine: { height: 2, backgroundColor: colors.accent, borderRadius: 1 },
 });

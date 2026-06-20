@@ -22,7 +22,7 @@ import {
 import { Button, Card, EmptyState } from '../../src/components/ui';
 import { colors, spacing } from '../../src/theme';
 import { BookProject, ReadingMaterial } from '../../src/types';
-import { exportBookToPdf, getSubjectLabel, sharePdf } from '../../src/utils/bookExport';
+import { exportBookToPdf, getBookPartSummary, getSubjectLabel, sharePdf } from '../../src/utils/bookExport';
 
 export default function BookDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -85,7 +85,11 @@ export default function BookDetailScreen() {
 
   const toggleBibliography = async (value: boolean) => {
     if (!book) return;
-    const updated = { ...book, includeBibliography: value };
+    const updated = {
+      ...book,
+      includeBibliography: value,
+      settings: { ...book.settings, includeBibliography: value },
+    };
     await saveBook(updated);
     setBook(updated);
   };
@@ -118,6 +122,8 @@ export default function BookDetailScreen() {
     );
   }
 
+  const bookParts = getBookPartSummary(book);
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -125,12 +131,40 @@ export default function BookDetailScreen() {
           <Text style={styles.bookTitle}>{book.title}</Text>
           {book.subtitle && <Text style={styles.subtitle}>{book.subtitle}</Text>}
           <Text style={styles.author}>Compiled by {book.author}</Text>
+          {book.settings.edition || book.settings.year ? (
+            <Text style={styles.edition}>
+              {[book.settings.edition, book.settings.year].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
+        </Card>
+
+        <Card style={styles.structureCard}>
+          <View style={styles.structureHeader}>
+            <Text style={styles.structureTitle}>Book Structure</Text>
+            <Button
+              title="Edit"
+              icon="settings"
+              variant="outline"
+              onPress={() => router.push(`/book/${book.id}/settings`)}
+            />
+          </View>
+          <Text style={styles.structureSummary}>{bookParts.join(' · ')}</Text>
+          <View style={styles.structureTags}>
+            {book.settings.includeTitlePage && <Tag label="Title Page" />}
+            {book.settings.includeCopyrightPage && <Tag label="Copyright" />}
+            {book.settings.includeTableOfContents && <Tag label="TOC" />}
+            {book.settings.includeTosOverview && <Tag label="TOS" />}
+            {book.settings.groupBySubject && <Tag label="Parts" />}
+            {book.settings.numberChapters && <Tag label="Chapters" />}
+            {book.settings.includeBibliography && <Tag label="References" />}
+            {book.settings.includeGlossary && <Tag label="Glossary" />}
+          </View>
         </Card>
 
         <View style={styles.bibRow}>
           <Text style={styles.bibLabel}>Include Bibliography</Text>
           <Switch
-            value={book.includeBibliography}
+            value={book.settings.includeBibliography}
             onValueChange={toggleBibliography}
             trackColor={{ true: colors.primary }}
           />
@@ -260,6 +294,24 @@ export default function BookDetailScreen() {
   );
 }
 
+function Tag({ label }: { label: string }) {
+  return (
+    <View style={tagStyles.tag}>
+      <Text style={tagStyles.tagText}>{label}</Text>
+    </View>
+  );
+}
+
+const tagStyles = StyleSheet.create({
+  tag: {
+    backgroundColor: '#E8F0EC',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagText: { fontSize: 11, fontWeight: '600', color: colors.primary },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
@@ -268,6 +320,17 @@ const styles = StyleSheet.create({
   bookTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
   subtitle: { fontSize: 14, color: colors.textSecondary, marginTop: 4 },
   author: { fontSize: 13, color: colors.accent, marginTop: spacing.sm },
+  edition: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+  structureCard: { marginBottom: spacing.md },
+  structureHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  structureTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  structureSummary: { fontSize: 13, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
+  structureTags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   bibRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
