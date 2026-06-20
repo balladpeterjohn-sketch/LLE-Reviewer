@@ -158,6 +158,8 @@ export default function BookDetailScreen() {
             {book.settings.numberChapters && <Tag label="Chapters" />}
             {book.settings.includeBibliography && <Tag label="References" />}
             {book.settings.includeGlossary && <Tag label="Glossary" />}
+            {(book.settings.includeRunningHeader !== false) && <Tag label="Header" />}
+            {(book.settings.includePageNumbers !== false) && <Tag label="Pages" />}
           </View>
         </Card>
 

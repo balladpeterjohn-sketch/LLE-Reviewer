@@ -90,6 +90,47 @@ export default function BookSettingsScreen() {
           placeholder="© 2026 Your Name. All rights reserved."
         />
 
+        <SectionTitle title="Page Layout" />
+        <Text style={styles.subLabel}>Paper Size</Text>
+        <OptionRow
+          options={[
+            { value: 'a4', label: 'A4' },
+            { value: 'letter', label: 'US Letter' },
+          ]}
+          selected={book.settings.pageSize ?? 'a4'}
+          onSelect={(v) => updateSettings({ pageSize: v as 'a4' | 'letter' })}
+        />
+        <Text style={styles.subLabel}>Margins</Text>
+        <OptionRow
+          options={[
+            { value: 'narrow', label: 'Narrow' },
+            { value: 'standard', label: 'Standard' },
+            { value: 'wide', label: 'Wide' },
+          ]}
+          selected={book.settings.marginPreset ?? 'standard'}
+          onSelect={(v) => updateSettings({ marginPreset: v as 'narrow' | 'standard' | 'wide' })}
+        />
+        <Toggle
+          label="Running Header (book title on each page)"
+          value={book.settings.includeRunningHeader !== false}
+          onChange={(v) => updateSettings({ includeRunningHeader: v })}
+        />
+        <Toggle
+          label="Page Numbers (Page X of Y in footer)"
+          value={book.settings.includePageNumbers !== false}
+          onChange={(v) => updateSettings({ includePageNumbers: v })}
+        />
+        <Field
+          label="Header Text (optional override)"
+          value={book.settings.headerText ?? ''}
+          onChange={(v) => updateSettings({ headerText: v })}
+        />
+        <Field
+          label="Footer Text (optional override, e.g. your name)"
+          value={book.settings.footerText ?? ''}
+          onChange={(v) => updateSettings({ footerText: v })}
+        />
+
         <SectionTitle title="Front Matter" />
         <Toggle label="Title Page" value={book.settings.includeTitlePage} onChange={(v) => updateSettings({ includeTitlePage: v })} />
         <Toggle label="Copyright Page" value={book.settings.includeCopyrightPage} onChange={(v) => updateSettings({ includeCopyrightPage: v })} />
@@ -258,6 +299,37 @@ function Toggle({
   );
 }
 
+function OptionRow({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: { value: string; label: string }[];
+  selected: string;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <View style={styles.optionRow}>
+      {options.map((opt) => (
+        <Pressable
+          key={opt.value}
+          style={[styles.optionChip, selected === opt.value && styles.optionChipActive]}
+          onPress={() => onSelect(opt.value)}
+        >
+          <Text
+            style={[
+              styles.optionChipText,
+              selected === opt.value && styles.optionChipTextActive,
+            ]}
+          >
+            {opt.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 function KeyValueList<T extends object>({
   entries,
   keyPlaceholder,
@@ -336,6 +408,18 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   subLabel: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.md, marginBottom: spacing.sm },
+  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  optionChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  optionChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  optionChipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  optionChipTextActive: { color: '#fff' },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: spacing.xs },
   field: { marginBottom: spacing.md },
   multiline: {

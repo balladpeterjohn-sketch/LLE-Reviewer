@@ -20,6 +20,10 @@ export const DEFAULT_BOOK_SETTINGS: BookSettings = {
   includeBibliography: true,
   includeGlossary: true,
   includeAboutAuthor: true,
+  pageSize: 'a4',
+  marginPreset: 'standard',
+  includeRunningHeader: true,
+  includePageNumbers: true,
 };
 
 export const DEFAULT_FRONT_MATTER: BookFrontMatter = {

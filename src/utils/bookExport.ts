@@ -5,6 +5,292 @@ import { BookProject, Citation, ContentBlock, ReadingMaterial } from '../types';
 import { normalizeBook } from './bookDefaults';
 import { formatCitation } from './citation';
 
+const PAGE_DIMENSIONS = {
+  a4: { width: 595, height: 842, cssSize: 'A4' },
+  letter: { width: 612, height: 792, cssSize: 'letter' },
+} as const;
+
+const MARGIN_PRESETS = {
+  narrow: { top: '1.8cm', right: '1.5cm', bottom: '2.2cm', left: '1.8cm', header: '1.2cm', footer: '1.2cm' },
+  standard: { top: '2.2cm', right: '2cm', bottom: '2.6cm', left: '2.5cm', header: '1.4cm', footer: '1.4cm' },
+  wide: { top: '2.6cm', right: '2.5cm', bottom: '3cm', left: '3cm', header: '1.6cm', footer: '1.6cm' },
+} as const;
+
+function getPageDimensions(book: BookProject) {
+  return PAGE_DIMENSIONS[book.settings.pageSize ?? 'a4'];
+}
+
+function getMargins(book: BookProject) {
+  return MARGIN_PRESETS[book.settings.marginPreset ?? 'standard'];
+}
+
+function buildBookStyles(book: BookProject): string {
+  const s = book.settings;
+  const page = getPageDimensions(book);
+  const margins = getMargins(book);
+  const showRunning = s.includeRunningHeader !== false;
+  const showPages = s.includePageNumbers !== false;
+
+  return `
+  @page {
+    size: ${page.cssSize};
+    margin: ${margins.top} ${margins.right} ${margins.bottom} ${margins.left};
+  }
+
+  @page cover {
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    margin: 0;
+    padding: 0;
+    color: #1a1a1a;
+    line-height: 1.65;
+    font-size: 11pt;
+    counter-reset: page;
+  }
+
+  .book-content {
+    width: 100%;
+  }
+
+  ${showRunning ? `
+  .print-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: ${margins.header};
+    padding: 0.35cm ${margins.right} 0 ${margins.left};
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 0.6pt solid #C9A227;
+    font-size: 8.5pt;
+    color: #5a5a5a;
+    background: #fff;
+    z-index: 1000;
+  }
+
+  .print-header .header-title {
+    font-weight: 600;
+    color: #1B4D3E;
+    max-width: 65%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .print-header .header-meta {
+    font-style: italic;
+    text-align: right;
+    max-width: 35%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: ${margins.footer};
+    padding: 0.2cm ${margins.right} 0.35cm ${margins.left};
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-top: 0.6pt solid #ddd;
+    font-size: 8.5pt;
+    color: #666;
+    background: #fff;
+    z-index: 1000;
+  }
+
+  .print-footer .footer-left {
+    max-width: 35%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .print-footer .footer-center {
+    flex: 1;
+    text-align: center;
+    font-weight: 600;
+    color: #1B4D3E;
+  }
+
+  .print-footer .footer-right {
+    max-width: 35%;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  ` : ''}
+
+  ${showPages ? `
+  .page-number::after {
+    content: counter(page);
+  }
+
+  .page-number-full::after {
+    content: "Page " counter(page) " of " counter(pages);
+  }
+  ` : ''}
+
+  .cover-pages .cover-page {
+    page: cover;
+    page-break-after: always;
+  }
+
+  .no-running-head {
+    page-break-before: always;
+  }
+
+  @media print {
+    .cover-page,
+    .cover-page * {
+      page-break-inside: avoid;
+    }
+
+    p { orphans: 3; widows: 3; }
+    h2, h3, h4 { page-break-after: avoid; }
+    figure, blockquote, .callout, table { page-break-inside: avoid; }
+    img { max-width: 100%; height: auto; }
+  }
+
+  @media screen {
+    body {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 24px 28px 48px;
+      background: #f4f2ed;
+    }
+
+    .book-content {
+      background: #fff;
+      padding: 40px 48px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      border-radius: 4px;
+      min-height: 80vh;
+    }
+
+    ${showRunning ? `
+    .print-header,
+    .print-footer {
+      position: relative;
+      margin: -40px -48px 24px;
+      width: calc(100% + 96px);
+      border-radius: 4px 4px 0 0;
+    }
+
+    .print-footer {
+      margin: 32px -48px -40px;
+      border-radius: 0 0 4px 4px;
+    }
+    ` : `
+    .print-header,
+    .print-footer { display: none; }
+    `}
+  }
+
+  .page-break { page-break-before: always; }
+  .title-page { text-align: center; padding-top: 22vh; min-height: 92vh; }
+  .cover-label { font-size: 10pt; letter-spacing: 2px; text-transform: uppercase; color: #C9A227; margin-bottom: 40px; }
+  .cover-title { font-size: 28pt; color: #1B4D3E; margin: 16px 0; line-height: 1.2; border: none; }
+  .cover-subtitle { font-size: 14pt; color: #555; margin-bottom: 12px; }
+  .cover-edition { font-size: 11pt; color: #777; margin-bottom: 40px; }
+  .cover-author { font-size: 13pt; font-weight: 600; margin-bottom: 8px; }
+  .cover-publisher { font-size: 10pt; color: #666; }
+  .cover-tos { font-size: 9pt; color: #999; margin-top: 60px; }
+  .copyright-page { padding-top: 8vh; min-height: 70vh; }
+  .copyright-meta { font-size: 10pt; color: #666; margin-top: 12px; }
+  h2 { color: #1B4D3E; border-bottom: 2px solid #C9A227; padding-bottom: 6px; margin-top: 20px; margin-bottom: 14px; font-size: 16pt; }
+  h3 { color: #2D6A4F; font-size: 13pt; margin-top: 18px; }
+  h4 { color: #2D6A4F; font-size: 12pt; }
+  p { margin: 0 0 10px; text-align: justify; }
+  .toc-list { list-style: none; padding: 0; }
+  .toc-list li { margin: 8px 0; border-bottom: 1px dotted #ddd; padding-bottom: 4px; display: flex; justify-content: space-between; gap: 12px; }
+  .toc-level-2 { padding-left: 20px; font-size: 10pt; }
+  .toc-list a { color: #1B4D3E; text-decoration: none; flex: 1; }
+  .part-divider { text-align: center; padding: 50px 16px; background: #F7F5F0; border-radius: 8px; margin: 16px 0; }
+  .part-label { font-size: 10pt; text-transform: uppercase; letter-spacing: 2px; color: #C9A227; }
+  .part-title { font-size: 20pt; color: #1B4D3E; border: none; margin: 12px 0; }
+  .part-weight { font-size: 10pt; color: #666; }
+  .part-desc { font-size: 10pt; color: #555; max-width: 500px; margin: 12px auto 0; text-align: center; }
+  .chapter-title { font-size: 16pt; }
+  .topic-label { font-size: 9pt; color: #888; font-style: italic; margin-bottom: 16px; text-align: left; }
+  blockquote { border-left: 4px solid #C9A227; margin: 16px 0; padding: 8px 16px; background: #f9f7f2; }
+  .callout { padding: 12px 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid; }
+  .callout-note { background: #E8F0EC; border-color: #1B4D3E; }
+  .callout-tip { background: #FFF8E7; border-color: #C9A227; }
+  .callout-important { background: #E8EEF8; border-color: #2D6A4F; }
+  .callout-warning { background: #FDEEEE; border-color: #C0392B; }
+  .footnote { font-size: 9pt; color: #666; border-top: 1px solid #eee; padding-top: 8px; }
+  .divider { border: none; border-top: 2px solid #C9A227; margin: 24px 0; page-break-after: always; }
+  figure { text-align: center; margin: 20px 0; }
+  figcaption { font-size: 9pt; color: #666; margin-top: 8px; font-style: italic; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt; }
+  th { background: #1B4D3E; color: white; padding: 8px; text-align: left; }
+  td { border: 1px solid #ddd; padding: 8px; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  .citation-ref { font-size: 10pt; color: #444; padding-left: 16px; border-left: 3px solid #ddd; text-align: left; }
+  .bib-entry { font-size: 10pt; text-indent: -20px; padding-left: 20px; margin: 8px 0; text-align: left; }
+  .image-text-layout { display: flex; gap: 16px; align-items: flex-start; margin: 20px 0; }
+  .side-img { width: 180px; max-height: 200px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .side-text { flex: 1; }
+  .side-caption { font-size: 9pt; color: #666; font-style: italic; }
+  .collage-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .collage-img { border-radius: 8px; object-fit: cover; height: 140px; }
+  .collage-img.cols-2 { width: calc(50% - 4px); }
+  .collage-img.cols-3 { width: calc(33.33% - 6px); }
+  .lof-list { list-style: none; padding: 0; }
+  .lof-list li { margin: 6px 0; font-size: 10pt; }
+`;
+}
+
+function renderRunningHead(book: BookProject): string {
+  const s = book.settings;
+  if (s.includeRunningHeader === false && s.includePageNumbers === false) return '';
+
+  const headerTitle = escapeHtml(s.headerText?.trim() || book.title);
+  const footerNote = escapeHtml(s.footerText?.trim() || book.author);
+  const editionLine = escapeHtml([s.edition, s.year].filter(Boolean).join(' · ') || 'LLE Reviewer');
+  const showHeader = s.includeRunningHeader !== false;
+  const showPages = s.includePageNumbers !== false;
+
+  const header = showHeader
+    ? `<div class="print-header">
+        <span class="header-title">${headerTitle}</span>
+        <span class="header-meta">${editionLine}</span>
+      </div>`
+    : '';
+
+  const pageNum = showPages
+    ? `<span class="footer-center page-number-full"></span>`
+    : '<span class="footer-center"></span>';
+
+  const footer = (showHeader || showPages)
+    ? `<div class="print-footer">
+        <span class="footer-left">${footerNote}</span>
+        ${pageNum}
+        <span class="footer-right">${headerTitle}</span>
+      </div>`
+    : '';
+
+  return header + footer;
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -155,7 +441,7 @@ function renderToc(entries: TocEntry[]): string {
 function renderTitlePage(book: BookProject): string {
   const s = book.settings;
   return `
-    <div class="title-page page-break" id="title-page">
+    <div class="title-page cover-page" id="title-page">
       <p class="cover-label">Librarians Licensure Examination Reviewer</p>
       <h1 class="cover-title">${escapeHtml(book.title)}</h1>
       ${book.subtitle ? `<p class="cover-subtitle">${escapeHtml(book.subtitle)}</p>` : ''}
@@ -172,7 +458,7 @@ function renderCopyrightPage(book: BookProject): string {
     book.settings.copyrightNotice?.trim() ||
     `© ${year} ${book.author}. All rights reserved.`;
   return `
-    <div class="copyright-page page-break" id="copyright">
+    <div class="copyright-page cover-page" id="copyright">
       <h2>Copyright</h2>
       <p>${escapeHtml(notice)}</p>
       <p class="copyright-meta">This reviewer was compiled for educational purposes aligned with the Philippine Librarians Licensure Examination syllabi and Table of Specifications.</p>
@@ -322,60 +608,6 @@ function renderBibliography(
   return `<div class="back-section page-break bibliography" id="references"><h2>References</h2>${entries}</div>`;
 }
 
-const BOOK_STYLES = `
-  body { font-family: Georgia, 'Times New Roman', serif; margin: 0; padding: 40px; color: #1a1a1a; line-height: 1.65; font-size: 14px; }
-  .page-break { page-break-before: always; }
-  .title-page { text-align: center; padding-top: 80px; min-height: 90vh; }
-  .cover-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #C9A227; margin-bottom: 40px; }
-  .cover-title { font-size: 32px; color: #1B4D3E; margin: 16px 0; line-height: 1.2; }
-  .cover-subtitle { font-size: 18px; color: #555; margin-bottom: 12px; }
-  .cover-edition { font-size: 14px; color: #777; margin-bottom: 40px; }
-  .cover-author { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-  .cover-publisher { font-size: 13px; color: #666; }
-  .cover-tos { font-size: 11px; color: #999; margin-top: 60px; }
-  .copyright-page { padding-top: 40px; }
-  .copyright-meta { font-size: 12px; color: #666; margin-top: 12px; }
-  h2 { color: #1B4D3E; border-bottom: 2px solid #C9A227; padding-bottom: 6px; margin-top: 24px; }
-  h3, h4 { color: #2D6A4F; }
-  .toc-list { list-style: none; padding: 0; }
-  .toc-list li { margin: 8px 0; border-bottom: 1px dotted #ddd; padding-bottom: 4px; }
-  .toc-level-2 { padding-left: 20px; font-size: 13px; }
-  .toc-list a { color: #1B4D3E; text-decoration: none; }
-  .part-divider { text-align: center; padding: 60px 20px; background: #F7F5F0; border-radius: 8px; margin: 20px 0; }
-  .part-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #C9A227; }
-  .part-title { font-size: 24px; color: #1B4D3E; border: none; margin: 12px 0; }
-  .part-weight { font-size: 13px; color: #666; }
-  .part-desc { font-size: 13px; color: #555; max-width: 500px; margin: 12px auto 0; }
-  .chapter-title { font-size: 20px; }
-  .topic-label { font-size: 12px; color: #888; font-style: italic; margin-bottom: 16px; }
-  blockquote { border-left: 4px solid #C9A227; margin: 16px 0; padding: 8px 16px; background: #f9f7f2; }
-  .callout { padding: 12px 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid; }
-  .callout-note { background: #E8F0EC; border-color: #1B4D3E; }
-  .callout-tip { background: #FFF8E7; border-color: #C9A227; }
-  .callout-important { background: #E8EEF8; border-color: #2D6A4F; }
-  .callout-warning { background: #FDEEEE; border-color: #C0392B; }
-  .footnote { font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 8px; }
-  .divider { border: none; border-top: 2px solid #C9A227; margin: 24px 0; }
-  figure { text-align: center; margin: 20px 0; }
-  figcaption { font-size: 12px; color: #666; margin-top: 8px; }
-  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
-  th { background: #1B4D3E; color: white; padding: 8px; text-align: left; }
-  td { border: 1px solid #ddd; padding: 8px; }
-  tr:nth-child(even) { background: #f9f9f9; }
-  .citation-ref { font-size: 13px; color: #444; padding-left: 16px; border-left: 3px solid #ddd; }
-  .bib-entry { font-size: 13px; text-indent: -20px; padding-left: 20px; margin: 8px 0; }
-  .image-text-layout { display: flex; gap: 16px; align-items: flex-start; margin: 20px 0; }
-  .side-img { width: 180px; max-height: 200px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-  .side-text { flex: 1; }
-  .side-caption { font-size: 12px; color: #666; font-style: italic; }
-  .collage-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .collage-img { border-radius: 8px; object-fit: cover; height: 140px; }
-  .collage-img.cols-2 { width: calc(50% - 4px); }
-  .collage-img.cols-3 { width: calc(33.33% - 6px); }
-  .lof-list { list-style: none; padding: 0; }
-  .lof-list li { margin: 6px 0; font-size: 13px; }
-`;
-
 export function buildBookHtml(
   rawBook: BookProject,
   materials: ReadingMaterial[],
@@ -387,38 +619,45 @@ export function buildBookHtml(
   const fm = book.frontMatter;
   const bm = book.backMatter;
 
-  const parts: string[] = [];
+  const coverParts: string[] = [];
+  const contentParts: string[] = [];
 
-  if (s.includeTitlePage) parts.push(renderTitlePage(book));
-  if (s.includeCopyrightPage) parts.push(renderCopyrightPage(book));
-  if (fm.dedication?.trim()) parts.push(renderFrontSection('dedication', 'Dedication', fm.dedication));
-  if (fm.foreword?.trim()) parts.push(renderFrontSection('foreword', 'Foreword', fm.foreword));
-  if (fm.preface?.trim()) parts.push(renderFrontSection('preface', 'Preface', fm.preface));
-  if (fm.acknowledgments?.trim()) parts.push(renderFrontSection('acknowledgments', 'Acknowledgments', fm.acknowledgments));
-  if (fm.introduction?.trim()) parts.push(renderFrontSection('introduction', 'Introduction', fm.introduction));
-  if (fm.abbreviations.length > 0) parts.push(renderAbbreviations(fm.abbreviations));
-  if (s.includeTosOverview) parts.push(renderTosOverview());
-  if (s.includeListOfFigures && countFigures(materials) > 0) parts.push(renderListOfFigures(materials));
-  if (s.includeTableOfContents) parts.push(renderToc(buildTocEntries(book, materials)));
+  if (s.includeTitlePage) coverParts.push(renderTitlePage(book));
+  if (s.includeCopyrightPage) coverParts.push(renderCopyrightPage(book));
 
-  parts.push(renderBody(book, materials, citationMap));
+  if (fm.dedication?.trim()) contentParts.push(renderFrontSection('dedication', 'Dedication', fm.dedication));
+  if (fm.foreword?.trim()) contentParts.push(renderFrontSection('foreword', 'Foreword', fm.foreword));
+  if (fm.preface?.trim()) contentParts.push(renderFrontSection('preface', 'Preface', fm.preface));
+  if (fm.acknowledgments?.trim()) contentParts.push(renderFrontSection('acknowledgments', 'Acknowledgments', fm.acknowledgments));
+  if (fm.introduction?.trim()) contentParts.push(renderFrontSection('introduction', 'Introduction', fm.introduction));
+  if (fm.abbreviations.length > 0) contentParts.push(renderAbbreviations(fm.abbreviations));
+  if (s.includeTosOverview) contentParts.push(renderTosOverview());
+  if (s.includeListOfFigures && countFigures(materials) > 0) contentParts.push(renderListOfFigures(materials));
+  if (s.includeTableOfContents) contentParts.push(renderToc(buildTocEntries(book, materials)));
 
-  if (bm.appendices.length > 0) parts.push(renderAppendices(bm.appendices));
-  if (s.includeGlossary && bm.glossary.length > 0) parts.push(renderGlossary(bm.glossary));
-  parts.push(renderBibliography(book, materials, allCitations));
+  contentParts.push(renderBody(book, materials, citationMap));
+
+  if (bm.appendices.length > 0) contentParts.push(renderAppendices(bm.appendices));
+  if (s.includeGlossary && bm.glossary.length > 0) contentParts.push(renderGlossary(bm.glossary));
+  contentParts.push(renderBibliography(book, materials, allCitations));
   if (s.includeAboutAuthor && bm.aboutAuthor?.trim()) {
-    parts.push(renderFrontSection('about-author', 'About the Author', bm.aboutAuthor));
+    contentParts.push(renderFrontSection('about-author', 'About the Author', bm.aboutAuthor));
   }
+
+  const runningHead = renderRunningHead(book);
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>${escapeHtml(book.title)}</title>
-  <style>${BOOK_STYLES}</style>
+  <style>${buildBookStyles(book)}</style>
 </head>
 <body>
-  ${parts.join('\n')}
+  <div class="cover-pages">${coverParts.join('\n')}</div>
+  ${runningHead}
+  <main class="book-content">${contentParts.join('\n')}</main>
 </body>
 </html>`;
 }
@@ -428,8 +667,15 @@ export async function exportBookToPdf(
   materials: ReadingMaterial[],
   citations: Citation[]
 ): Promise<string> {
-  const html = buildBookHtml(book, materials, citations);
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  const normalized = normalizeBook(book);
+  const html = buildBookHtml(normalized, materials, citations);
+  const page = getPageDimensions(normalized);
+  const { uri } = await Print.printToFileAsync({
+    html,
+    width: page.width,
+    height: page.height,
+    base64: false,
+  });
   return uri;
 }
 

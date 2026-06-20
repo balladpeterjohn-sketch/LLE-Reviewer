@@ -105,6 +105,9 @@ export interface BookBackMatter {
   aboutAuthor?: string;
 }
 
+export type PageSize = 'a4' | 'letter';
+export type MarginPreset = 'standard' | 'narrow' | 'wide';
+
 export interface BookSettings {
   edition?: string;
   year?: string;
@@ -120,6 +123,12 @@ export interface BookSettings {
   includeBibliography: boolean;
   includeGlossary: boolean;
   includeAboutAuthor: boolean;
+  pageSize: PageSize;
+  marginPreset: MarginPreset;
+  includeRunningHeader: boolean;
+  includePageNumbers: boolean;
+  headerText?: string;
+  footerText?: string;
 }
 
 export interface BookProject {
