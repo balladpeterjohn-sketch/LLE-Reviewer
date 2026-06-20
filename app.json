@@ -19,7 +19,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -35,6 +38,13 @@
           "photosPermission": "Allow LLE Reviewer to access your photos for reading materials."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "94029283-92f0-49a0-9827-7f61f3dc5b1c"
+      }
+    },
+    "owner": "pheejay08s-team"
   }
 }
