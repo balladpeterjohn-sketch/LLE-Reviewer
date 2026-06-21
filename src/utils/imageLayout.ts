@@ -35,7 +35,7 @@ export function getImageLayout(block: ContentBlock): ImageLayout {
 }
 
 export function getImageSize(block: ContentBlock): ImageSize {
-  return block.imageSize ?? 'medium';
+  return block.imageSize ?? 'small';
 }
 
 export function isStackedLayout(layout: ImageLayout): boolean {
@@ -79,13 +79,13 @@ export function getNativeFullImageStyle(size: ImageSize): {
 } {
   switch (size) {
     case 'small':
-      return { width: '50%', height: 140, alignSelf: 'center' };
+      return { width: '40%', height: 110, alignSelf: 'center' };
     case 'large':
-      return { width: '90%', height: 280, alignSelf: 'center' };
+      return { width: '85%', height: 240, alignSelf: 'center' };
     case 'full':
-      return { width: '100%', height: 320, alignSelf: 'stretch' };
+      return { width: '100%', height: 280, alignSelf: 'stretch' };
     default:
-      return { width: '75%', height: 220, alignSelf: 'center' };
+      return { width: '60%', height: 170, alignSelf: 'center' };
   }
 }
 
@@ -115,25 +115,25 @@ export function getPdfImageCellWidth(size: ImageSize): string {
 export function getPdfImageMaxWidth(size: ImageSize): string {
   switch (size) {
     case 'small':
-      return '45%';
+      return '32%';
     case 'large':
-      return '88%';
+      return '72%';
     case 'full':
       return '100%';
     default:
-      return '68%';
+      return '50%';
   }
 }
 
 export function getPdfImageMaxHeight(size: ImageSize): string {
   switch (size) {
     case 'small':
-      return '160px';
+      return '120px';
     case 'large':
-      return '360px';
+      return '280px';
     case 'full':
-      return '460px';
+      return '400px';
     default:
-      return '260px';
+      return '200px';
   }
 }

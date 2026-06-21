@@ -54,12 +54,12 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
       block.level = 2;
     }
     if (type === 'image') {
-      block.imageSize = 'medium';
+      block.imageSize = 'small';
     }
     if (type === 'image-text') {
       block.text = '';
       block.imageLayout = 'left';
-      block.imageSize = 'medium';
+      block.imageSize = 'small';
     }
     if (type === 'image-collage') {
       block.imageUris = [];
@@ -301,6 +301,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
           {block.type === 'image' && (
             <View>
               <Text style={styles.controlLabel}>Image size</Text>
+              <Text style={styles.controlHint}>Tap Small, Medium, Large, or Full to resize</Text>
               <OptionChips
                 options={IMAGE_SIZES.map((s) => ({ value: s, label: IMAGE_SIZE_LABELS[s] }))}
                 selected={getImageSize(block)}
@@ -343,6 +344,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
                 />
               </ScrollView>
               <Text style={styles.controlLabel}>Image size</Text>
+              <Text style={styles.controlHint}>Tap Small, Medium, Large, or Full to resize</Text>
               <OptionChips
                 options={IMAGE_SIZES.map((s) => ({ value: s, label: IMAGE_SIZE_LABELS[s] }))}
                 selected={getImageSize(block)}
@@ -712,6 +714,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   controlLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: spacing.xs },
+  controlHint: { fontSize: 12, color: colors.textSecondary, marginBottom: spacing.sm },
   optionScroll: { flexGrow: 0, marginBottom: spacing.sm },
   optionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   image: { borderRadius: 8, backgroundColor: '#EEE' },
