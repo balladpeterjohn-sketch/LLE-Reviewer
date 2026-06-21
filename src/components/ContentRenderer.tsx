@@ -4,6 +4,7 @@ import { getCitations } from '../services/storage';
 import { colors, spacing } from '../theme';
 import { CalloutVariant, Citation, ContentBlock } from '../types';
 import { formatCitation } from '../utils/citation';
+import { parseRichText, RichTextSpan } from '../utils/richText';
 import {
   getImageLayout,
   getImageSize,
@@ -41,6 +42,29 @@ export function ContentRenderer({ blocks, compact }: ContentRendererProps) {
   );
 }
 
+function RichText({ text, style }: { text: string; style?: object }) {
+  const spans = parseRichText(text ?? '');
+  const hasFmt = spans.some((s) => s.bold || s.italic || s.underline || s.highlight || s.strikethrough);
+  if (!hasFmt) return <Text style={style}>{text}</Text>;
+  return (
+    <Text style={style}>
+      {spans.map((span, i) => (
+        <RichSpan key={i} span={span} />
+      ))}
+    </Text>
+  );
+}
+
+function RichSpan({ span }: { span: RichTextSpan }) {
+  const spanStyle: object[] = [];
+  if (span.bold)          spanStyle.push({ fontWeight: '700' as const });
+  if (span.italic)        spanStyle.push({ fontStyle: 'italic' as const });
+  if (span.underline)     spanStyle.push({ textDecorationLine: 'underline' as const });
+  if (span.strikethrough) spanStyle.push({ textDecorationLine: 'line-through' as const });
+  if (span.highlight)     spanStyle.push({ backgroundColor: '#FFF3CD' });
+  return <Text style={spanStyle.length > 0 ? spanStyle : undefined}>{span.text}</Text>;
+}
+
 function BlockView({
   block,
   citations,
@@ -60,11 +84,11 @@ function BlockView({
       );
     }
     case 'paragraph':
-      return <Text style={styles.paragraph}>{block.text || ''}</Text>;
+      return <RichText text={block.text ?? ''} style={styles.paragraph} />;
     case 'quote':
       return (
         <View style={styles.quote}>
-          <Text style={styles.quoteText}>{block.text || ''}</Text>
+          <RichText text={block.text ?? ''} style={styles.quoteText} />
         </View>
       );
     case 'image':

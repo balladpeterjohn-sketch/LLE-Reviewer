@@ -2,6 +2,7 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,13 +13,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { getBook, saveBook } from '../../../src/services/storage';
 import { Button, Input } from '../../../src/components/ui';
 import { colors, spacing } from '../../../src/theme';
-import {
-  BookProject,
-} from '../../../src/types';
+import { BookFont, BookProject, CitationStyle } from '../../../src/types';
 import { generateId } from '../../../src/utils/id';
+import { CITATION_STYLE_LABELS } from '../../../src/utils/citation';
 
 export default function BookSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -88,6 +89,38 @@ export default function BookSettingsScreen() {
           value={book.settings.copyrightNotice ?? ''}
           onChange={(v) => updateSettings({ copyrightNotice: v })}
           placeholder="© 2026 Your Name. All rights reserved."
+        />
+
+        <SectionTitle title="Typography" />
+        <Text style={styles.subLabel}>Body Font</Text>
+        <OptionRow
+          options={[
+            { value: 'georgia', label: 'Georgia' },
+            { value: 'palatino', label: 'Palatino' },
+            { value: 'times', label: 'Times' },
+            { value: 'helvetica', label: 'Helvetica' },
+          ]}
+          selected={book.settings.fontFamily ?? 'georgia'}
+          onSelect={(v) => updateSettings({ fontFamily: v as BookFont })}
+        />
+        <Text style={styles.subLabel}>Citation Style</Text>
+        <OptionRow
+          options={(Object.keys(CITATION_STYLE_LABELS) as CitationStyle[]).map((k) => ({ value: k, label: CITATION_STYLE_LABELS[k] }))}
+          selected={book.settings.citationStyle ?? 'apa'}
+          onSelect={(v) => updateSettings({ citationStyle: v as CitationStyle })}
+        />
+
+        <SectionTitle title="Cover Image" />
+        <CoverImagePicker
+          uri={book.settings.coverImageUri}
+          onPick={async () => {
+            const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, base64: true });
+            if (!r.canceled && r.assets[0]) {
+              const a = r.assets[0];
+              updateSettings({ coverImageUri: a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri });
+            }
+          }}
+          onRemove={() => updateSettings({ coverImageUri: undefined })}
         />
 
         <SectionTitle title="Page Layout" />
@@ -399,6 +432,26 @@ function KeyValueList<T extends object>({
   );
 }
 
+function CoverImagePicker({ uri, onPick, onRemove }: { uri?: string; onPick: () => void; onRemove: () => void }) {
+  return (
+    <View style={styles.coverPicker}>
+      {uri ? (
+        <View style={styles.coverPreview}>
+          <Image source={{ uri }} style={styles.coverImage} resizeMode="cover" />
+          <View style={styles.coverBtns}>
+            <Button title="Change" onPress={onPick} variant="outline" small />
+            <Button title="Remove" onPress={onRemove} variant="danger" small />
+          </View>
+        </View>
+      ) : (
+        <Pressable style={styles.coverPlaceholder} onPress={onPick}>
+          <Text style={styles.coverPlaceholderText}>Tap to add a cover image</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: colors.background },
@@ -472,4 +525,13 @@ const styles = StyleSheet.create({
   kvValue: { flex: 1 },
   removeText: { color: colors.danger, fontSize: 18, padding: spacing.sm },
   saveBtn: { marginTop: spacing.xl },
+  coverPicker: { marginBottom: spacing.md },
+  coverPreview: { gap: spacing.sm },
+  coverImage: { width: '100%', height: 180, borderRadius: 12 },
+  coverBtns: { flexDirection: 'row', gap: spacing.sm },
+  coverPlaceholder: {
+    height: 120, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.border,
+    borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+  },
+  coverPlaceholderText: { color: colors.textSecondary, fontSize: 14 },
 });

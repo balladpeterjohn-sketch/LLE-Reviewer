@@ -1,4 +1,6 @@
 export type CitationType = 'book' | 'journal' | 'website' | 'thesis' | 'report' | 'other';
+export type CitationStyle = 'apa' | 'mla' | 'chicago';
+export type BookFont = 'georgia' | 'palatino' | 'helvetica' | 'times';
 
 export interface Citation {
   id: string;
@@ -151,6 +153,10 @@ export interface BookSettings {
   pageNumberPlacement: PageNumberPlacement;
   headerText?: string;
   footerText?: string;
+  /* new */
+  fontFamily?: BookFont;
+  citationStyle?: CitationStyle;
+  coverImageUri?: string;
 }
 
 export interface BookProject {

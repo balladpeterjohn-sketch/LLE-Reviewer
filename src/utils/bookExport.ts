@@ -1,9 +1,11 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { TOS_SUBJECTS, findSubject, findTopic } from '../data/tosSubjects';
-import { BookProject, Citation, ContentBlock, ReadingMaterial } from '../types';
+import { BookFont, BookProject, Citation, CitationStyle, ContentBlock, ReadingMaterial } from '../types';
 import { normalizeBook } from './bookDefaults';
 import { formatCitation } from './citation';
+import { richTextToHtml } from './richText';
 import {
   getImageLayout,
   getImageSize,
@@ -34,6 +36,16 @@ function getPageDimensions(book: BookProject) {
 
 function getMargins(book: BookProject) {
   return MARGIN_PRESETS[book.settings.marginPreset ?? 'standard'];
+}
+
+function getBookFont(book: BookProject): string {
+  const fonts: Record<BookFont, string> = {
+    georgia: "Georgia, 'Times New Roman', Times, serif",
+    palatino: "'Palatino Linotype', Palatino, 'Book Antiqua', serif",
+    times: "'Times New Roman', Times, serif",
+    helvetica: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+  };
+  return fonts[book.settings.fontFamily ?? 'georgia'];
 }
 
 function cssQuote(text: string): string {
@@ -132,6 +144,7 @@ function buildPageMarginCss(book: BookProject, margins: ReturnType<typeof getMar
 
 function buildPdfStyles(book: BookProject): string {
   const margins = getMargins(book);
+  const bodyFont = getBookFont(book);
 
   return `
   ${buildPageMarginCss(book, margins)}
@@ -144,7 +157,7 @@ function buildPdfStyles(book: BookProject): string {
 
   html, body {
     margin: 0; padding: 0; width: 100%;
-    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-family: ${bodyFont};
     color: #1a1a1a;
     line-height: 1.68;
     font-size: 11pt;
@@ -1288,7 +1301,7 @@ function paragraphsHtml(text: string): string {
     .join('');
 }
 
-function renderBlock(block: ContentBlock, citations: Map<string, Citation>): string {
+function renderBlock(block: ContentBlock, citations: Map<string, Citation>, citationStyle?: CitationStyle): string {
   switch (block.type) {
     case 'heading': {
       const level = block.level ?? 2;
@@ -1297,13 +1310,13 @@ function renderBlock(block: ContentBlock, citations: Map<string, Citation>): str
       return `<${tag}>${escapeHtml(block.text ?? '')}</${tag}>`;
     }
     case 'paragraph':
-      return `<p>${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>`;
+      return `<p>${richTextToHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>`;
     case 'quote':
-      return `<blockquote><p>${escapeHtml(block.text ?? '')}</p></blockquote>`;
+      return `<blockquote><p>${richTextToHtml(block.text ?? '')}</p></blockquote>`;
     case 'callout': {
       const variant = block.calloutVariant ?? 'note';
       const label = variant.charAt(0).toUpperCase() + variant.slice(1);
-      const body = escapeHtml(block.text ?? '').replace(/\n/g, '<br/>');
+      const body = richTextToHtml(block.text ?? '').replace(/\n/g, '<br/>');
       return `<div class="callout callout-${variant}"><div class="callout-header"><span class="callout-badge">${label}</span></div><div class="callout-body">${body}</div></div>`;
     }
     case 'footnote':
@@ -1330,7 +1343,7 @@ function renderBlock(block: ContentBlock, citations: Map<string, Citation>): str
     case 'citation': {
       const citation = block.citationId ? citations.get(block.citationId) : undefined;
       if (!citation) return '';
-      return `<p class="citation-ref"><em>${escapeHtml(formatCitation(citation))}</em></p>`;
+      return `<p class="citation-ref"><em>${escapeHtml(formatCitation(citation, citationStyle))}</em></p>`;
     }
     default:
       return '';
@@ -1410,10 +1423,14 @@ function renderToc(entries: TocEntry[]): string {
 function renderTitlePage(book: BookProject): string {
   const s = book.settings;
   const editionParts = [s.edition, s.year].filter(Boolean).join(' \u00B7 ');
+  const coverImg = s.coverImageUri
+    ? `<div style="text-align:center;margin:16pt 0;"><img src="${s.coverImageUri}" alt="Book Cover" style="max-width:240px;max-height:180px;border-radius:8px;margin:0 auto;" /></div>`
+    : '';
   return `
     <div class="title-page cover-page" id="title-page">
       <hr class="title-page-rule"/>
       <p class="cover-label">Librarians Licensure Examination Reviewer</p>
+      ${coverImg}
       <h1 class="cover-title">${escapeHtml(book.title)}</h1>
       ${book.subtitle ? `<p class="cover-subtitle">${escapeHtml(book.subtitle)}</p>` : ''}
       ${editionParts ? `<p class="cover-edition">${escapeHtml(editionParts)}</p>` : ''}
@@ -1495,7 +1512,7 @@ function renderMaterial(
   const chapterTitle = settings.numberChapters
     ? `Chapter ${chapterNum}: ${material.title}`
     : material.title;
-  const blocksHtml = material.blocks.map((b) => renderBlock(b, citations)).join('\n');
+  const blocksHtml = material.blocks.map((b) => renderBlock(b, citations, settings.citationStyle)).join('\n');
   const chapNumDecoration = settings.numberChapters
     ? `<div class="chapter-num-decoration">${chapterNum}</div>`
     : '';
@@ -1576,18 +1593,18 @@ function renderBibliography(
   const usedIds = new Set<string>();
   for (const m of materials) {
     m.citationIds.forEach((id) => usedIds.add(id));
-    m.blocks.forEach((b) => {
-      if (b.citationId) usedIds.add(b.citationId);
-    });
+    m.blocks.forEach((b) => { if (b.citationId) usedIds.add(b.citationId); });
   }
+  const style = book.settings.citationStyle;
   const entries = Array.from(usedIds)
     .map((id) => citationMap.get(id))
     .filter((c): c is Citation => !!c)
     .sort((a, b) => a.authors.localeCompare(b.authors))
-    .map((c, i) => `<p class="bib-entry">${i + 1}. ${escapeHtml(formatCitation(c))}</p>`)
+    .map((c, i) => `<p class="bib-entry">${i + 1}. ${escapeHtml(formatCitation(c, style))}</p>`)
     .join('');
   if (!entries) return '';
-  return `<div class="back-section page-break bibliography" id="references"><h2>References</h2>${entries}</div>`;
+  const styleLabel = style === 'mla' ? 'Works Cited' : style === 'chicago' ? 'Bibliography' : 'References';
+  return `<div class="back-section page-break bibliography" id="references"><h2>${styleLabel}</h2>${entries}</div>`;
 }
 
 /* ── SHARED CONTENT ASSEMBLY ───────────────────────────────────────────── */
@@ -1765,4 +1782,27 @@ export function getBookStats(materials: ReadingMaterial[]): {
   }
   const readingMinutes = Math.max(1, Math.round(words / 200));
   return { words, readingMinutes, blocks };
+}
+
+/* ── EPUB EXPORT (self-contained HTML) ──────────────────────────────────── */
+
+export async function exportBookToEpubHtml(
+  book: BookProject,
+  materials: ReadingMaterial[],
+  citations: Citation[]
+): Promise<string> {
+  const normalized = normalizeBook(book);
+  const html = buildBookHtml(normalized, materials, citations);
+  const path = `${FileSystem.documentDirectory}${normalized.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.html`;
+  await FileSystem.writeAsStringAsync(path, html, { encoding: FileSystem.EncodingType.UTF8 });
+  return path;
+}
+
+export async function shareEpubHtml(uri: string, title: string): Promise<void> {
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType: 'text/html',
+      dialogTitle: `Share ${title}`,
+    });
+  }
 }

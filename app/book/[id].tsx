@@ -24,10 +24,12 @@ import { colors, spacing } from '../../src/theme';
 import { BookProject, ReadingMaterial } from '../../src/types';
 import {
   exportBookToPdf,
+  exportBookToEpubHtml,
   getBookPartSummary,
   getBookStats,
   getSubjectLabel,
   sharePdf,
+  shareEpubHtml,
 } from '../../src/utils/bookExport';
 
 export default function BookDetailScreen() {
@@ -37,6 +39,7 @@ export default function BookDetailScreen() {
   const [allMaterials, setAllMaterials] = useState<ReadingMaterial[]>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingHtml, setExportingHtml] = useState(false);
 
   const load = useCallback(() => {
     if (id) {
@@ -111,6 +114,26 @@ export default function BookDetailScreen() {
       Alert.alert('Export failed', 'Could not generate PDF. Please try again.');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportHtml = async () => {
+    if (!book || book.sections.length === 0) {
+      Alert.alert('No sections', 'Add reading materials before exporting.');
+      return;
+    }
+    setExportingHtml(true);
+    try {
+      const citations = await getCitations();
+      const materials = book.sections
+        .map((s) => materialMap.get(s.materialId))
+        .filter((m): m is ReadingMaterial => !!m);
+      const uri = await exportBookToEpubHtml(book, materials, citations);
+      await shareEpubHtml(uri, book.title);
+    } catch {
+      Alert.alert('Export failed', 'Could not generate HTML export.');
+    } finally {
+      setExportingHtml(false);
     }
   };
 
@@ -278,6 +301,14 @@ export default function BookDetailScreen() {
               icon="download"
               onPress={handleExport}
               disabled={exporting}
+              style={styles.exportBtn}
+            />
+            <Button
+              title={exportingHtml ? 'Exporting…' : 'Export HTML'}
+              icon="code-slash"
+              variant="ghost"
+              onPress={handleExportHtml}
+              disabled={exportingHtml}
               style={styles.exportBtn}
             />
           </View>

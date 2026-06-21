@@ -196,3 +196,65 @@ export async function getStats() {
     books: data.books.length,
   };
 }
+
+export async function duplicateMaterial(id: string): Promise<ReadingMaterial | undefined> {
+  const original = await getMaterial(id);
+  if (!original) return undefined;
+  const now = new Date().toISOString();
+  const copy: ReadingMaterial = {
+    ...original,
+    id: generateId(),
+    title: `${original.title} (copy)`,
+    blocks: original.blocks.map((b) => ({ ...b, id: generateId() })),
+    createdAt: now,
+    updatedAt: now,
+  };
+  return saveMaterial(copy);
+}
+
+export async function exportBackup(): Promise<string> {
+  const data = await loadData();
+  return JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), ...data }, null, 2);
+}
+
+export async function importBackup(jsonString: string): Promise<{ materials: number; citations: number; books: number }> {
+  const parsed = JSON.parse(jsonString);
+  const incoming: AppData = {
+    materials: Array.isArray(parsed.materials) ? parsed.materials : [],
+    citations: Array.isArray(parsed.citations) ? parsed.citations : [],
+    books: Array.isArray(parsed.books) ? parsed.books : [],
+  };
+  const current = await loadData();
+  const merged: AppData = {
+    materials: mergeById(current.materials, incoming.materials),
+    citations: mergeById(current.citations, incoming.citations),
+    books: mergeById(current.books, incoming.books),
+  };
+  await saveData(merged);
+  return {
+    materials: incoming.materials.length,
+    citations: incoming.citations.length,
+    books: incoming.books.length,
+  };
+}
+
+function mergeById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
+  const map = new Map(existing.map((x) => [x.id, x]));
+  for (const item of incoming) map.set(item.id, item);
+  return Array.from(map.values());
+}
+
+export async function getMaterialCount(): Promise<number> {
+  const data = await loadData();
+  return data.materials.length;
+}
+
+export async function getMaterialsBySubject(): Promise<Map<string, Set<string>>> {
+  const materials = await getMaterials();
+  const map = new Map<string, Set<string>>();
+  for (const m of materials) {
+    if (!map.has(m.subjectId)) map.set(m.subjectId, new Set());
+    map.get(m.subjectId)!.add(m.topicId);
+  }
+  return map;
+}
