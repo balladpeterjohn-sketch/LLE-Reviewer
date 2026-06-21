@@ -12,7 +12,12 @@ import {
   getNativeFullImageStyle,
   getNativeSideImageSize,
   getNativeStackedImageStyle,
+  getNativeMagazineImageSize,
+  getNativeInsetImageSize,
+  getNativeBannerImageSize,
   isStackedLayout,
+  isMagazineLayout,
+  isInsetLayout,
 } from '../utils/imageLayout';
 
 interface ContentRendererProps {
@@ -112,16 +117,70 @@ function BlockView({
       const layout = getImageLayout(block);
       const size = getImageSize(block);
       const stacked = isStackedLayout(layout);
-      const imageStyle = stacked
-        ? getNativeStackedImageStyle(size)
-        : getNativeSideImageSize(size);
+      const magazine = isMagazineLayout(layout);
+      const inset = isInsetLayout(layout);
+      const banner = layout === 'banner';
 
+      if (banner) {
+        const bannerSize = getNativeBannerImageSize(size);
+        return (
+          <View style={styles.bannerBlock}>
+            {block.imageUri ? (
+              <Image source={{ uri: block.imageUri }} style={[styles.bannerImage, bannerSize]} resizeMode="cover" />
+            ) : null}
+            {block.text ? <Text style={styles.paragraph}>{block.text}</Text> : null}
+            {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
+          </View>
+        );
+      }
+
+      if (inset) {
+        const insetSize = getNativeInsetImageSize(size);
+        const isLeft = layout === 'inset-left';
+        return (
+          <View style={styles.figure}>
+            <View style={styles.imageTextRow}>
+              {isLeft && block.imageUri ? (
+                <Image source={{ uri: block.imageUri }} style={[styles.insetImage, insetSize]} resizeMode="cover" />
+              ) : null}
+              <View style={styles.sideTextWrap}>
+                <Text style={styles.paragraph}>{block.text || ''}</Text>
+                {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
+              </View>
+              {!isLeft && block.imageUri ? (
+                <Image source={{ uri: block.imageUri }} style={[styles.insetImage, insetSize]} resizeMode="cover" />
+              ) : null}
+            </View>
+          </View>
+        );
+      }
+
+      if (magazine) {
+        const magSize = getNativeMagazineImageSize(size);
+        const isLeft = layout === 'magazine-left';
+        const imageNode = block.imageUri ? (
+          <Image source={{ uri: block.imageUri }} style={[styles.magazineImage, magSize]} resizeMode="cover" />
+        ) : (
+          <View style={[styles.magazineImage, magSize, styles.imagePlaceholder]}>
+            <Text style={styles.placeholderLabel}>No image</Text>
+          </View>
+        );
+        const textNode = (
+          <View style={styles.sideTextWrap}>
+            <Text style={styles.paragraph}>{block.text || ''}</Text>
+            {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
+          </View>
+        );
+        return (
+          <View style={styles.magazineRow}>
+            {isLeft ? <>{imageNode}{textNode}</> : <>{textNode}{imageNode}</>}
+          </View>
+        );
+      }
+
+      const imageStyle = stacked ? getNativeStackedImageStyle(size) : getNativeSideImageSize(size);
       const image = block.imageUri ? (
-        <Image
-          source={{ uri: block.imageUri }}
-          style={[stacked ? styles.stackedImage : styles.sideImage, imageStyle]}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: block.imageUri }} style={[stacked ? styles.stackedImage : styles.sideImage, imageStyle]} resizeMode="cover" />
       ) : (
         <View style={[stacked ? styles.stackedImage : styles.sideImage, imageStyle, styles.imagePlaceholder]}>
           <Text style={styles.placeholderLabel}>No image</Text>
@@ -134,32 +193,11 @@ function BlockView({
         </View>
       );
 
-      const content =
-        layout === 'right' || layout === 'wrap-right' ? (
-          <>
-            {text}
-            {image}
-          </>
-        ) : layout === 'bottom' ? (
-          <>
-            {text}
-            {image}
-          </>
-        ) : (
-          <>
-            {image}
-            {text}
-          </>
-        );
+      const isRightLayout = layout === 'right' || layout === 'wrap-right';
+      const content = isRightLayout ? <>{text}{image}</> : layout === 'bottom' ? <>{text}{image}</> : <>{image}{text}</>;
 
       return (
-        <View
-          style={[
-            stacked ? styles.stackedLayout : styles.imageTextRow,
-            compact && !stacked && styles.imageTextRowCompact,
-            layout === 'center' && styles.centeredLayout,
-          ]}
-        >
+        <View style={[stacked ? styles.stackedLayout : styles.imageTextRow, compact && !stacked && styles.imageTextRowCompact, layout === 'center' && styles.centeredLayout]}>
           {content}
         </View>
       );
@@ -286,6 +324,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEE',
   },
   stackedImage: {
+    borderRadius: 10,
+    backgroundColor: '#EEE',
+  },
+  magazineRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+  },
+  magazineImage: {
+    borderRadius: 10,
+    backgroundColor: '#EEE',
+    width: '45%',
+  },
+  insetImage: {
+    borderRadius: 8,
+    backgroundColor: '#EEE',
+  },
+  bannerBlock: {
+    gap: spacing.sm,
+  },
+  bannerImage: {
+    width: '100%',
     borderRadius: 10,
     backgroundColor: '#EEE',
   },

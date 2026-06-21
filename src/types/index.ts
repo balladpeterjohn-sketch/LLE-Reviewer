@@ -60,7 +60,12 @@ export type ImageLayout =
   | 'bottom'
   | 'wrap-left'
   | 'wrap-right'
-  | 'center';
+  | 'center'
+  | 'magazine-left'
+  | 'magazine-right'
+  | 'banner'
+  | 'inset-left'
+  | 'inset-right';
 export type ImageWrap = 'none' | 'wrap-left' | 'wrap-right';
 export type CollageColumns = 2 | 3;
 export type PageNumberPlacement = 'outer' | 'center';

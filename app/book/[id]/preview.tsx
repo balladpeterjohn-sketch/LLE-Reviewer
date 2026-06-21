@@ -15,10 +15,11 @@ import { buildBookPreviewHtml } from '../../../src/utils/bookExport';
 import { colors, spacing } from '../../../src/theme';
 import { Citation, ReadingMaterial } from '../../../src/types';
 
-interface WebViewMessage {
-  type: 'pageVisible';
+interface WebViewMsg {
+  type: 'pageChange';
+  page: number;
+  total: number;
   title: string;
-  id: string;
 }
 
 export default function BookPreviewScreen() {
@@ -26,22 +27,21 @@ export default function BookPreviewScreen() {
   const router = useRouter();
   const [html, setHtml] = useState<string | null>(null);
   const [bookTitle, setBookTitle] = useState('Book Preview');
-  const [currentSection, setCurrentSection] = useState('');
-  const [sectionVisible, setSectionVisible] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [pageInfo, setPageInfo] = useState({ page: 1, total: 0 });
+  const [chapterTitle, setChapterTitle] = useState('');
+  const titleFade = useRef(new Animated.Value(0)).current;
 
-  const showSection = useCallback(
+  const showTitle = useCallback(
     (title: string) => {
       if (!title) return;
-      setCurrentSection(title);
-      setSectionVisible(true);
+      setChapterTitle(title);
       Animated.sequence([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-        Animated.delay(2200),
-        Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
-      ]).start(() => setSectionVisible(false));
+        Animated.timing(titleFade, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.delay(2000),
+        Animated.timing(titleFade, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
     },
-    [fadeAnim]
+    [titleFade]
   );
 
   const load = useCallback(() => {
@@ -63,39 +63,43 @@ export default function BookPreviewScreen() {
   useFocusEffect(load);
 
   const handleMessage = useCallback(
-    (event: WebViewMessageEvent) => {
+    (e: WebViewMessageEvent) => {
       try {
-        const msg: WebViewMessage = JSON.parse(event.nativeEvent.data);
-        if (msg.type === 'pageVisible' && msg.title) {
-          showSection(msg.title);
+        const msg: WebViewMsg = JSON.parse(e.nativeEvent.data);
+        if (msg.type === 'pageChange') {
+          setPageInfo({ page: msg.page, total: msg.total });
+          if (msg.title) showTitle(msg.title);
         }
-      } catch {
-        /* ignore non-JSON messages */
-      }
+      } catch { /* ignore */ }
     },
-    [showSection]
+    [showTitle]
   );
 
   return (
     <View style={styles.container}>
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={21} color="#fff" />
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
         </Pressable>
-        <View style={styles.titleBlock}>
+
+        <View style={styles.titleWrap}>
           <Text style={styles.toolbarTitle} numberOfLines={1}>{bookTitle}</Text>
-          <Text style={styles.toolbarSubtitle}>Book Preview</Text>
+          {pageInfo.total > 0 && (
+            <Text style={styles.toolbarPageInfo}>
+              Page {pageInfo.page} of {pageInfo.total}
+            </Text>
+          )}
         </View>
+
         <View style={styles.spacer} />
       </View>
 
-      {/* Section toast */}
-      {sectionVisible && (
-        <Animated.View style={[styles.sectionToast, { opacity: fadeAnim }]}>
-          <Text style={styles.sectionToastText} numberOfLines={1}>{currentSection}</Text>
-        </Animated.View>
-      )}
+      {/* Chapter toast */}
+      <Animated.View style={[styles.chapterToast, { opacity: titleFade }]} pointerEvents="none">
+        <Ionicons name="bookmark" size={11} color="rgba(201,162,39,0.8)" />
+        <Text style={styles.chapterToastText} numberOfLines={1}>{chapterTitle}</Text>
+      </Animated.View>
 
       {html ? (
         <WebView
@@ -103,16 +107,18 @@ export default function BookPreviewScreen() {
           source={{ html }}
           style={styles.webview}
           onMessage={handleMessage}
-          allowsInlineMediaPlayback
           javaScriptEnabled
+          allowsInlineMediaPlayback
+          scrollEnabled={false}
         />
       ) : (
         <View style={styles.loading}>
-          <View style={styles.bookIconContainer}>
-            <Ionicons name="book" size={48} color={colors.accent} />
+          <View style={styles.loadingBook}>
+            <Ionicons name="book" size={44} color={colors.accent} />
           </View>
-          <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 16 }} />
+          <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 20 }} />
           <Text style={styles.loadingText}>Preparing your book…</Text>
+          <Text style={styles.loadingHint}>Swipe left/right or tap ‹ › to flip pages</Text>
         </View>
       )}
     </View>
@@ -130,18 +136,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     gap: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(201,162,39,0.25)',
+    borderBottomColor: 'rgba(201,162,39,0.2)',
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 
   backBtn: {
-    padding: 4,
-    borderRadius: 6,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  titleBlock: {
-    flex: 1,
-    alignItems: 'center',
-  },
+  titleWrap: { flex: 1, alignItems: 'center' },
 
   toolbarTitle: {
     color: '#fff',
@@ -151,36 +163,37 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  toolbarSubtitle: {
-    color: 'rgba(255,255,255,0.5)',
+  toolbarPageInfo: {
+    color: 'rgba(255,255,255,0.45)',
     fontSize: 10,
-    textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 1,
   },
 
-  spacer: { width: 29 },
+  spacer: { width: 34 },
 
-  sectionToast: {
+  chapterToast: {
     position: 'absolute',
-    top: 58,
-    left: spacing.lg,
-    right: spacing.lg,
-    backgroundColor: 'rgba(27,77,62,0.92)',
-    borderRadius: 8,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    zIndex: 100,
+    top: 54,
+    left: spacing.xl,
+    right: spacing.xl,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(20,40,28,0.92)',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    zIndex: 50,
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(201,162,39,0.3)',
+    borderColor: 'rgba(201,162,39,0.2)',
   },
-
-  sectionToastText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
+  chapterToastText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 11,
     fontStyle: 'italic',
-    textAlign: 'center',
+    flexShrink: 1,
   },
 
   webview: { flex: 1, backgroundColor: '#18181c' },
@@ -190,24 +203,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#18181c',
-    gap: 4,
+    gap: 6,
+    paddingHorizontal: spacing.xl,
   },
 
-  bookIconContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: 16,
-    backgroundColor: 'rgba(27,77,62,0.25)',
+  loadingBook: {
+    width: 90,
+    height: 90,
+    borderRadius: 18,
+    backgroundColor: 'rgba(27,77,62,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(201,162,39,0.2)',
   },
 
   loadingText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 13,
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 14,
     fontStyle: 'italic',
     marginTop: 8,
+  },
+
+  loadingHint: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
