@@ -79,6 +79,9 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
     if (type === 'image-collage') { block.imageUris = []; block.collageColumns = 2; block.imageSize = 'medium'; }
     if (type === 'callout') { block.text = ''; block.calloutVariant = 'note'; }
     if (type === 'footnote') block.text = '';
+    if (type === 'bullet-list' || type === 'numbered-list') block.items = [''];
+    if (type === 'checklist') { block.items = ['']; block.checkedItems = [false]; }
+    if (type === 'code') block.text = '';
     if (type === 'table') {
       block.rows = [
         [{ value: 'Column 1' }, { value: 'Column 2' }],
@@ -496,6 +499,39 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
             </View>
           )}
 
+          {/* Bullet / Numbered / Checklist */}
+          {(block.type === 'bullet-list' || block.type === 'numbered-list' || block.type === 'checklist') && (
+            <ListEditor
+              block={block}
+              onUpdate={(patch) => updateBlock(index, patch)}
+            />
+          )}
+
+          {/* Code block */}
+          {block.type === 'code' && (
+            <View style={styles.codeCard}>
+              <TextInput
+                style={styles.codeInput}
+                placeholder="Enter code or preformatted text…"
+                value={block.text ?? ''}
+                onChangeText={(text) => updateBlock(index, { text })}
+                multiline
+                textAlignVertical="top"
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+              />
+              <TextInput
+                style={styles.codeLangInput}
+                placeholder="Language (optional, e.g. python)"
+                value={block.codeLanguage ?? ''}
+                onChangeText={(v) => updateBlock(index, { codeLanguage: v })}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          )}
+
           {/* Citation */}
           {block.type === 'citation' && (
             <View style={styles.citationBlock}>
@@ -521,10 +557,14 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.addBar} contentContainerStyle={styles.addBarContent}>
           <AddChip icon="text" label="Text" onPress={() => addBlock('paragraph')} />
           <AddChip icon="text-outline" label="Heading" onPress={() => addBlock('heading')} />
+          <AddChip icon="list-outline" label="Bullets" onPress={() => addBlock('bullet-list')} />
+          <AddChip icon="reorder-three-outline" label="Numbered" onPress={() => addBlock('numbered-list')} />
+          <AddChip icon="checkbox-outline" label="Checklist" onPress={() => addBlock('checklist')} />
+          <AddChip icon="code-slash-outline" label="Code" onPress={() => addBlock('code')} />
           <AddChip icon="image-outline" label="Image" onPress={() => addBlock('image')} />
           <AddChip icon="albums-outline" label="Img+Text" onPress={() => addBlock('image-text')} />
           <AddChip icon="grid-outline" label="Collage" onPress={() => addBlock('image-collage')} />
-          <AddChip icon="list-outline" label="Table" onPress={() => addBlock('table')} />
+          <AddChip icon="grid" label="Table" onPress={() => addBlock('table')} />
           <AddChip icon="chatbox-ellipses-outline" label="Quote" onPress={() => addBlock('quote')} />
           <AddChip icon="information-circle-outline" label="Callout" onPress={() => addBlock('callout')} />
           <AddChip icon="receipt-outline" label="Footnote" onPress={() => addBlock('footnote')} />
@@ -651,6 +691,99 @@ function ImageTextEditorPreview({
   return (
     <View style={stacked ? styles.stackedPreview : styles.imageTextPreview}>
       {isRightLayout ? <>{textNode}{imageNode}</> : <>{imageNode}{textNode}</>}
+    </View>
+  );
+}
+
+/* ── LIST EDITOR ─────────────────────────────────────────────────────── */
+
+function ListEditor({
+  block,
+  onUpdate,
+}: {
+  block: ContentBlock;
+  onUpdate: (patch: Partial<ContentBlock>) => void;
+}) {
+  const isChecklist  = block.type === 'checklist';
+  const isNumbered   = block.type === 'numbered-list';
+  const items        = block.items ?? [''];
+  const checkedItems = block.checkedItems ?? items.map(() => false);
+
+  const setItem = (i: number, val: string) => {
+    const next = [...items];
+    next[i] = val;
+    onUpdate({ items: next });
+  };
+
+  const addItem = (afterIndex: number) => {
+    const next = [...items];
+    const nextChecked = [...checkedItems];
+    next.splice(afterIndex + 1, 0, '');
+    nextChecked.splice(afterIndex + 1, 0, false);
+    onUpdate({ items: next, checkedItems: nextChecked });
+  };
+
+  const removeItem = (i: number) => {
+    if (items.length <= 1) {
+      onUpdate({ items: [''], checkedItems: [false] });
+      return;
+    }
+    const next        = items.filter((_, idx) => idx !== i);
+    const nextChecked = checkedItems.filter((_, idx) => idx !== i);
+    onUpdate({ items: next, checkedItems: nextChecked });
+  };
+
+  const toggleCheck = (i: number) => {
+    const next = [...checkedItems];
+    next[i] = !next[i];
+    onUpdate({ checkedItems: next });
+  };
+
+  return (
+    <View style={styles.listEditor}>
+      {items.map((item, i) => (
+        <View key={i} style={styles.listRow}>
+          {/* Bullet / Number / Checkbox */}
+          {isChecklist ? (
+            <Pressable onPress={() => toggleCheck(i)} style={styles.listCheck} hitSlop={6}>
+              <Ionicons
+                name={checkedItems[i] ? 'checkbox' : 'square-outline'}
+                size={20}
+                color={checkedItems[i] ? colors.primary : colors.textTertiary}
+              />
+            </Pressable>
+          ) : isNumbered ? (
+            <View style={styles.listNumBadge}>
+              <Text style={styles.listNumText}>{i + 1}</Text>
+            </View>
+          ) : (
+            <View style={styles.listBullet} />
+          )}
+
+          {/* Text input */}
+          <TextInput
+            style={[styles.listItemInput, isChecklist && checkedItems[i] && styles.listItemDone]}
+            value={item}
+            onChangeText={(v) => setItem(i, v)}
+            placeholder="List item…"
+            returnKeyType="next"
+            onSubmitEditing={() => addItem(i)}
+            blurOnSubmit={false}
+            multiline={false}
+          />
+
+          {/* Remove */}
+          <Pressable onPress={() => removeItem(i)} hitSlop={6}>
+            <Ionicons name="close-circle-outline" size={18} color={colors.textTertiary} />
+          </Pressable>
+        </View>
+      ))}
+
+      {/* Add item */}
+      <Pressable style={styles.listAddBtn} onPress={() => addItem(items.length - 1)}>
+        <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+        <Text style={styles.listAddText}>Add item</Text>
+      </Pressable>
     </View>
   );
 }
@@ -830,6 +963,44 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 2,
   },
   collageAddText: { fontSize: 11, color: colors.primary, fontWeight: '600' },
+
+  /* List editor */
+  listEditor: { gap: 4 },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  listBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginHorizontal: 5, flexShrink: 0 },
+  listCheck: { flexShrink: 0 },
+  listNumBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  listNumText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  listItemInput: { flex: 1, fontSize: 14, color: colors.text, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.border },
+  listItemDone: { textDecorationLine: 'line-through', color: colors.textTertiary },
+  listAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 8, paddingLeft: 2 },
+  listAddText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+
+  /* Code block */
+  codeCard: { gap: spacing.sm },
+  codeInput: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    color: colors.text,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.sm + 2,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  codeLangInput: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    fontFamily: 'monospace',
+  },
 
   tableEditor: { gap: spacing.sm },
   tableRow: { flexDirection: 'row' },

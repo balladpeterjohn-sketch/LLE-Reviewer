@@ -477,6 +477,22 @@ function buildPdfStyles(book: BookProject): string {
     font-weight: inherit;
   }
 
+  /* ── LISTS ──────────────────────────────────────────────── */
+  ul.content-list, ol.content-list { margin: 10pt 0; padding-left: 22pt; page-break-inside: avoid; }
+  ul.content-list { list-style-type: disc; }
+  ul.content-list li::marker, ol.content-list li::marker { color: #1B4D3E; font-weight: 600; }
+  ol.content-list { list-style-type: decimal; }
+  ul.content-list li, ol.content-list li { font-size: 11pt; line-height: 1.65; margin-bottom: 4pt; text-align: justify; }
+  ul.checklist { list-style: none; padding-left: 4pt; margin: 10pt 0; page-break-inside: avoid; }
+  ul.checklist li { font-size: 11pt; line-height: 1.65; margin-bottom: 4pt; }
+  .check-mark { font-size: 12pt; margin-right: 6pt; }
+
+  /* ── CODE ────────────────────────────────────────────────── */
+  .code-block { background: #F6F8FA; border: 1px solid #E0DDD5; border-radius: 4pt; margin: 12pt 0; page-break-inside: avoid; }
+  .code-lang { display: block; background: #1B4D3E; color: #fff; font-size: 7.5pt; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3pt 8pt; font-family: 'Courier New', Courier, monospace; }
+  .code-block pre { margin: 0; padding: 10pt; }
+  .code-block code { font-family: 'Courier New', Courier, monospace; font-size: 9.5pt; color: #24292F; white-space: pre-wrap; word-wrap: break-word; }
+
   /* ── BLOCKQUOTES ─────────────────────────────────────────── */
   blockquote {
     border-left: 4px solid #C9A227;
@@ -890,6 +906,19 @@ function buildPreviewStyles(): string {
   h4 { color: #2D6A4F; font-size: 11.5pt; margin: 12pt 0 5pt; font-style: italic; }
   h5 { color: #555; font-size: 9.5pt; margin: 10pt 0 4pt; text-transform: uppercase; letter-spacing: 0.5px; }
   p { margin: 0 0 9pt; text-align: justify; line-height: 1.68; }
+
+  ul.content-list, ol.content-list { margin: 10pt 0; padding-left: 22pt; }
+  ul.content-list { list-style-type: disc; }
+  ul.content-list li::marker, ol.content-list li::marker { color: #1B4D3E; font-weight: 600; }
+  ol.content-list { list-style-type: decimal; }
+  ul.content-list li, ol.content-list li { font-size: 11pt; line-height: 1.65; margin-bottom: 4pt; }
+  ul.checklist { list-style: none; padding-left: 4pt; margin: 10pt 0; }
+  ul.checklist li { font-size: 11pt; line-height: 1.65; margin-bottom: 4pt; }
+  .check-mark { font-size: 13pt; margin-right: 6pt; }
+  .code-block { background: #F6F8FA; border: 1px solid #E0DDD5; border-radius: 6px; margin: 12pt 0; }
+  .code-lang { display: block; background: #1B4D3E; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; }
+  .code-block pre { margin: 0; padding: 10pt; }
+  .code-block code { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #24292F; white-space: pre-wrap; word-wrap: break-word; }
 
   blockquote {
     border-left: 4px solid #C9A227; margin: 14pt 0;
@@ -1347,6 +1376,30 @@ function renderBlock(block: ContentBlock, citations: Map<string, Citation>, cita
     }
     case 'paragraph':
       return `<p>${richTextToHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>`;
+    case 'bullet-list': {
+      if (!block.items?.length) return '';
+      const lis = block.items.map((item) => `<li>${richTextToHtml(item)}</li>`).join('');
+      return `<ul class="content-list">${lis}</ul>`;
+    }
+    case 'numbered-list': {
+      if (!block.items?.length) return '';
+      const lis = block.items.map((item) => `<li>${richTextToHtml(item)}</li>`).join('');
+      return `<ol class="content-list">${lis}</ol>`;
+    }
+    case 'checklist': {
+      if (!block.items?.length) return '';
+      const checked = block.checkedItems ?? block.items.map(() => false);
+      const lis = block.items.map((item, i) => {
+        const mark = checked[i] ? '&#9745;' : '&#9744;';
+        const lineThrough = checked[i] ? 'text-decoration:line-through;color:#999;' : '';
+        return `<li class="checklist-item"><span class="check-mark">${mark}</span> <span style="${lineThrough}">${richTextToHtml(item)}</span></li>`;
+      }).join('');
+      return `<ul class="checklist">${lis}</ul>`;
+    }
+    case 'code': {
+      const lang = block.codeLanguage ? `<span class="code-lang">${escapeHtml(block.codeLanguage)}</span>` : '';
+      return `<div class="code-block">${lang}<pre><code>${escapeHtml(block.text ?? '')}</code></pre></div>`;
+    }
     case 'quote':
       return `<blockquote><p>${richTextToHtml(block.text ?? '')}</p></blockquote>`;
     case 'callout': {
@@ -1944,6 +1997,11 @@ export function getBookStats(materials: ReadingMaterial[]): {
       blocks++;
       if (b.text) {
         words += b.text.trim().split(/\s+/).filter(Boolean).length;
+      }
+      if (b.items) {
+        for (const item of b.items) {
+          words += item.trim().split(/\s+/).filter(Boolean).length;
+        }
       }
       if (b.rows) {
         for (const row of b.rows) {

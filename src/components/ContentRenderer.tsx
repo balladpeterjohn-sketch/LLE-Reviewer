@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { getCitations } from '../services/storage';
@@ -85,6 +86,59 @@ function BlockView({
     }
     case 'paragraph':
       return <RichText text={block.text ?? ''} style={styles.paragraph} />;
+    case 'bullet-list':
+    case 'numbered-list': {
+      const items = block.items ?? [];
+      if (items.length === 0) return null;
+      return (
+        <View style={styles.listBlock}>
+          {items.map((item, i) => (
+            <View key={i} style={styles.listRow}>
+              {block.type === 'numbered-list' ? (
+                <View style={styles.listNumBadge}>
+                  <Text style={styles.listNumText}>{i + 1}</Text>
+                </View>
+              ) : (
+                <View style={styles.listBullet} />
+              )}
+              <RichText text={item} style={styles.listItemText} />
+            </View>
+          ))}
+        </View>
+      );
+    }
+    case 'checklist': {
+      const items = block.items ?? [];
+      const checked = block.checkedItems ?? items.map(() => false);
+      if (items.length === 0) return null;
+      return (
+        <View style={styles.listBlock}>
+          {items.map((item, i) => (
+            <View key={i} style={styles.listRow}>
+              <Ionicons
+                name={checked[i] ? 'checkbox' : 'square-outline'}
+                size={18}
+                color={checked[i] ? colors.primary : colors.textTertiary}
+                style={{ marginTop: 2 }}
+              />
+              <RichText
+                text={item}
+                style={[styles.listItemText, checked[i] && styles.listItemDone]}
+              />
+            </View>
+          ))}
+        </View>
+      );
+    }
+    case 'code':
+      return (
+        <View style={styles.codeBlock}>
+          {block.codeLanguage ? (
+            <Text style={styles.codeLang}>{block.codeLanguage}</Text>
+          ) : null}
+          <Text style={styles.codeText} selectable>{block.text ?? ''}</Text>
+        </View>
+      );
     case 'quote':
       return (
         <View style={styles.quote}>
@@ -426,4 +480,18 @@ const styles = StyleSheet.create({
   footnoteText: { fontSize: 12, lineHeight: 18, color: colors.textSecondary },
   dividerWrap: { paddingVertical: spacing.md },
   dividerLine: { height: 2, backgroundColor: colors.accent, borderRadius: 1 },
+
+  /* Lists */
+  listBlock: { gap: 6 },
+  listRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  listBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 8, flexShrink: 0 },
+  listNumBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
+  listNumText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  listItemText: { flex: 1, fontSize: 15, lineHeight: 24, color: colors.text },
+  listItemDone: { textDecorationLine: 'line-through', color: colors.textTertiary },
+
+  /* Code */
+  codeBlock: { backgroundColor: colors.surfaceSubtle, borderRadius: 8, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  codeLang: { fontSize: 10, fontWeight: '700', color: colors.primary, backgroundColor: colors.primaryMuted, paddingHorizontal: spacing.sm, paddingVertical: 3, textTransform: 'uppercase', letterSpacing: 0.5 },
+  codeText: { fontFamily: 'monospace', fontSize: 13, color: colors.text, padding: spacing.sm, lineHeight: 20 },
 });

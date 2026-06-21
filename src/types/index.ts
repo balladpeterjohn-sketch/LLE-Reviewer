@@ -25,15 +25,19 @@ export interface Citation {
 export type ContentBlockType =
   | 'heading'
   | 'paragraph'
+  | 'bullet-list'
+  | 'numbered-list'
+  | 'checklist'
+  | 'code'
   | 'image'
   | 'image-text'
   | 'image-collage'
   | 'table'
   | 'quote'
-  | 'citation'
   | 'callout'
   | 'footnote'
-  | 'divider';
+  | 'divider'
+  | 'citation';
 
 export type CalloutVariant = 'note' | 'tip' | 'important' | 'warning';
 
@@ -94,6 +98,12 @@ export interface ContentBlock {
   rows?: TableCell[][];
   citationId?: string;
   calloutVariant?: CalloutVariant;
+  /** List items — used by bullet-list, numbered-list, checklist */
+  items?: string[];
+  /** Check state per item — used by checklist */
+  checkedItems?: boolean[];
+  /** Language hint — used by code block */
+  codeLanguage?: string;
 }
 
 export interface ReadingMaterial {
