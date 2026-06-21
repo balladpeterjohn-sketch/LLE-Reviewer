@@ -3,6 +3,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { TOS_SUBJECTS, findSubject, findTopic } from '../data/tosSubjects';
 import { BookFont, BookProject, Citation, CitationStyle, ContentBlock, ReadingMaterial } from '../types';
+import { TosTopic } from '../types';
 import { normalizeBook } from './bookDefaults';
 import { formatCitation } from './citation';
 import { richTextToHtml } from './richText';
@@ -339,6 +340,7 @@ function buildPdfStyles(book: BookProject): string {
   .toc-page::after { content: target-counter(attr(data-target url), page); font-size: 9pt; color: #1B4D3E; }
 
   .toc-level-2 { padding-left: 20px; font-size: 10pt; }
+  .toc-level-3 { padding-left: 36px; font-size: 9.5pt; color: #666; }
   .toc-list a { color: #1B4D3E; text-decoration: none; }
 
   /* ── PART DIVIDERS ───────────────────────────────────────── */
@@ -445,6 +447,34 @@ function buildPdfStyles(book: BookProject): string {
     color: #1B4D3E;
     font-weight: bold;
     font-family: Georgia, serif;
+  }
+
+  /* ── SUBTOPIC SECTIONS (children of a parent topic) ─────────── */
+  .subtopic-section {
+    margin-top: 18pt;
+    padding-top: 14pt;
+    border-top: 1px solid #E8E5E0;
+  }
+
+  .subtopic-section:first-child { margin-top: 10pt; padding-top: 0; border-top: 0; }
+
+  .subtopic-title {
+    font-size: 13pt;
+    color: #2D6A4F;
+    margin: 0 0 5pt;
+    page-break-after: avoid;
+    border-left: 3px solid #C9A227;
+    padding-left: 8pt;
+    border-bottom: 0;
+  }
+
+  .subtopic-body > p:first-child::first-letter {
+    float: none;
+    font-size: inherit;
+    line-height: inherit;
+    margin: 0;
+    color: inherit;
+    font-weight: inherit;
   }
 
   /* ── BLOCKQUOTES ─────────────────────────────────────────── */
@@ -908,6 +938,7 @@ function buildPreviewStyles(): string {
   .toc-page { flex: 0 0 auto; font-size: 9pt; color: #888; }
   .toc-page .toc-page-num { display: none; }
   .toc-level-2 { padding-left: 20px; font-size: 10pt; }
+  .toc-level-3 { padding-left: 36px; font-size: 9.5pt; color: #666; }
   .toc-list a { color: #1B4D3E; text-decoration: none; }
 
   .part-divider { text-align: center; padding: 56pt 32pt 48pt; background: linear-gradient(155deg, #1B4D3E 0%, #0d2419 100%); }
@@ -923,6 +954,11 @@ function buildPreviewStyles(): string {
   .chapter-title { font-size: 17pt; position: relative; z-index: 1; }
   .topic-label { font-size: 8.5pt; color: #999; font-style: italic; margin-bottom: 14pt; letter-spacing: 0.3px; }
   .chapter-body > p:first-child::first-letter { float: left; font-size: 3.5em; line-height: 0.82; margin: 0.05em 0.08em 0 0; color: #1B4D3E; font-weight: bold; font-family: Georgia, serif; }
+
+  .subtopic-section { margin-top: 18pt; padding-top: 14pt; border-top: 1px solid rgba(0,0,0,0.06); }
+  .subtopic-section:first-child { margin-top: 8pt; padding-top: 0; border-top: 0; }
+  .subtopic-title { font-size: 13pt; color: #2D6A4F; margin: 0 0 5pt; border-left: 3px solid #C9A227; padding-left: 8pt; }
+  .subtopic-body > p:first-child::first-letter { float: none; font-size: inherit; line-height: inherit; margin: 0; color: inherit; font-weight: inherit; }
 
   .title-page { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 40px 50px; min-height: 300px; }
   .title-page-rule { width: 72%; height: 2px; border: 0; margin: 16pt auto; background: linear-gradient(to right, transparent, #C9A227, transparent); }
@@ -1382,22 +1418,34 @@ function buildTocEntries(book: BookProject, materials: ReadingMaterial[]): TocEn
 
   let chapter = 0;
   let lastSubject = '';
-  const ordered = book.sections
-    .sort((a, b) => a.order - b.order)
-    .map((sec) => materials.find((m) => m.id === sec.materialId))
-    .filter((m): m is ReadingMaterial => !!m);
+  const groups = buildMaterialGroups(book, materials);
 
-  for (const material of ordered) {
-    if (s.groupBySubject && material.subjectId !== lastSubject) {
-      const subject = findSubject(material.subjectId);
+  for (const group of groups) {
+    const firstMaterial = group.kind === 'single' ? group.material : group.materials[0];
+
+    if (s.groupBySubject && firstMaterial.subjectId !== lastSubject) {
+      const subject = findSubject(firstMaterial.subjectId);
       if (subject) {
-        entries.push({ id: `part-${material.subjectId}`, label: `Part: ${subject.title}`, level: 1 });
-        lastSubject = material.subjectId;
+        entries.push({ id: `part-${firstMaterial.subjectId}`, label: `Part: ${subject.title}`, level: 1 });
+        lastSubject = firstMaterial.subjectId;
       }
     }
+
     chapter++;
-    const prefix = s.numberChapters ? `Chapter ${chapter}: ` : '';
-    entries.push({ id: `ch-${material.id}`, label: `${prefix}${material.title}`, level: 2 });
+
+    if (group.kind === 'single') {
+      const prefix = s.numberChapters ? `Chapter ${chapter}: ` : '';
+      entries.push({ id: `ch-${group.material.id}`, label: `${prefix}${group.material.title}`, level: 2 });
+    } else {
+      // Grouped subtopics: chapter entry for parent + sub-entries for each subtopic
+      const prefix = s.numberChapters ? `Chapter ${chapter}: ` : '';
+      entries.push({ id: `ch-group-${group.materials[0].id}`, label: `${prefix}${group.parentTopic.title}`, level: 2 });
+      for (const material of group.materials) {
+        const topicInfo = findTopic(material.subjectId, material.topicId);
+        const code = topicInfo?.topic.code ?? '';
+        entries.push({ id: `ch-${material.id}`, label: `${code} ${material.title}`.trim(), level: 3 });
+      }
+    }
   }
 
   if (bm.appendices.length > 0) entries.push({ id: 'appendices', label: 'Appendices', level: 1 });
@@ -1501,6 +1549,48 @@ function renderListOfFigures(materials: ReadingMaterial[]): string {
   return `<section class="front-section page-break" id="list-of-figures"><h2>List of Figures</h2><ul class="lof-list">${items.join('')}</ul></section>`;
 }
 
+/* ── MATERIAL GROUPING ─────────────────────────────────────────────────── */
+
+type MaterialGroup =
+  | { kind: 'single'; material: ReadingMaterial }
+  | { kind: 'grouped'; parentTopic: TosTopic; subjectId: string; materials: ReadingMaterial[] };
+
+function buildMaterialGroups(book: BookProject, materials: ReadingMaterial[]): MaterialGroup[] {
+  const ordered = book.sections
+    .sort((a, b) => a.order - b.order)
+    .map((sec) => materials.find((m) => m.id === sec.materialId))
+    .filter((m): m is ReadingMaterial => !!m);
+
+  const groups: MaterialGroup[] = [];
+
+  for (const material of ordered) {
+    const topicInfo = findTopic(material.subjectId, material.topicId);
+
+    if (topicInfo?.parent) {
+      // This material belongs to a subtopic — try to append to an existing group
+      const last = groups[groups.length - 1];
+      if (
+        last?.kind === 'grouped' &&
+        last.parentTopic.id === topicInfo.parent.id &&
+        last.subjectId === material.subjectId
+      ) {
+        last.materials.push(material);
+      } else {
+        groups.push({
+          kind: 'grouped',
+          parentTopic: topicInfo.parent,
+          subjectId: material.subjectId,
+          materials: [material],
+        });
+      }
+    } else {
+      groups.push({ kind: 'single', material });
+    }
+  }
+
+  return groups;
+}
+
 function renderMaterial(
   material: ReadingMaterial,
   citations: Map<string, Citation>,
@@ -1526,6 +1616,43 @@ function renderMaterial(
     </section>`;
 }
 
+function renderGroupedChapter(
+  parentTopic: TosTopic,
+  materials: ReadingMaterial[],
+  citations: Map<string, Citation>,
+  chapterNum: number,
+  settings: BookProject['settings']
+): string {
+  const chapterTitle = settings.numberChapters
+    ? `Chapter ${chapterNum}: ${parentTopic.title}`
+    : parentTopic.title;
+  const chapNumDecoration = settings.numberChapters
+    ? `<div class="chapter-num-decoration">${chapterNum}</div>`
+    : '';
+
+  const sections = materials.map((material) => {
+    const topicInfo = findTopic(material.subjectId, material.topicId);
+    const subtopicLabel = topicInfo
+      ? `${topicInfo.topic.code} \u2014 ${topicInfo.topic.title}`
+      : '';
+    const blocksHtml = material.blocks.map((b) => renderBlock(b, citations, settings.citationStyle)).join('\n');
+
+    return `
+      <div class="subtopic-section" id="ch-${material.id}">
+        <h3 class="subtopic-title">${escapeHtml(material.title)}</h3>
+        ${subtopicLabel ? `<p class="topic-label">${escapeHtml(subtopicLabel)}</p>` : ''}
+        <div class="subtopic-body">${blocksHtml}</div>
+      </div>`;
+  }).join('\n');
+
+  return `
+    <section class="chapter page-break" id="ch-group-${materials[0].id}">
+      ${chapNumDecoration}
+      <h2 class="chapter-title">${escapeHtml(chapterTitle)}</h2>
+      ${sections}
+    </section>`;
+}
+
 function renderBody(
   book: BookProject,
   materials: ReadingMaterial[],
@@ -1534,19 +1661,17 @@ function renderBody(
   let chapter = 0;
   let lastSubject = '';
   const parts: string[] = [];
+  const groups = buildMaterialGroups(book, materials);
 
-  const ordered = book.sections
-    .sort((a, b) => a.order - b.order)
-    .map((sec) => materials.find((m) => m.id === sec.materialId))
-    .filter((m): m is ReadingMaterial => !!m);
+  for (const group of groups) {
+    const firstMaterial = group.kind === 'single' ? group.material : group.materials[0];
 
-  for (const material of ordered) {
-    if (book.settings.groupBySubject && material.subjectId !== lastSubject) {
-      const subject = findSubject(material.subjectId);
+    if (book.settings.groupBySubject && firstMaterial.subjectId !== lastSubject) {
+      const subject = findSubject(firstMaterial.subjectId);
       if (subject) {
-        const partNum = TOS_SUBJECTS.findIndex((s) => s.id === material.subjectId) + 1;
+        const partNum = TOS_SUBJECTS.findIndex((s) => s.id === firstMaterial.subjectId) + 1;
         parts.push(`
-          <div class="part-divider page-break" id="part-${material.subjectId}">
+          <div class="part-divider page-break" id="part-${firstMaterial.subjectId}">
             <span class="part-label">Part ${partNum}</span>
             <span class="part-ornament">\u2736 \u2736 \u2736</span>
             <h2 class="part-title">${escapeHtml(subject.title)}</h2>
@@ -1554,12 +1679,18 @@ function renderBody(
             <p class="part-weight">Exam Weight: ${subject.weight}% &nbsp;\u00B7&nbsp; Day ${subject.examDay}</p>
             <p class="part-desc">${escapeHtml(subject.description)}</p>
           </div>`);
-        lastSubject = material.subjectId;
+        lastSubject = firstMaterial.subjectId;
       }
     }
+
     chapter++;
-    parts.push(renderMaterial(material, citations, chapter, book.settings));
+    if (group.kind === 'single') {
+      parts.push(renderMaterial(group.material, citations, chapter, book.settings));
+    } else {
+      parts.push(renderGroupedChapter(group.parentTopic, group.materials, citations, chapter, book.settings));
+    }
   }
+
   return parts.join('\n');
 }
 
