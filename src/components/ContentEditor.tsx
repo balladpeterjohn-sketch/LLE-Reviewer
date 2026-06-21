@@ -362,7 +362,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
                 onChangeText={(caption) => updateBlock(index, { caption })}
               />
               {block.imageUri && (
-                <Button title="Change Image" onPress={() => pickImage(index)} variant="ghost" small />
+                <Button title="Change Image" onPress={() => pickImage(index)} variant="ghost" size="sm" />
               )}
             </View>
           )}
@@ -417,7 +417,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
                 onChangeText={(caption) => updateBlock(index, { caption })}
               />
               {block.imageUri && (
-                <Button title="Change Image" onPress={() => pickImage(index)} variant="ghost" small />
+                <Button title="Change Image" onPress={() => pickImage(index)} variant="ghost" size="sm" />
               )}
             </View>
           )}
@@ -490,8 +490,8 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
                 </View>
               </ScrollView>
               <View style={styles.tableActions}>
-                <Button title="+ Row" onPress={() => addTableRow(index)} variant="ghost" small />
-                <Button title="+ Column" onPress={() => addTableColumn(index)} variant="ghost" small />
+                <Button title="+ Row" onPress={() => addTableRow(index)} variant="ghost" size="sm" />
+                <Button title="+ Column" onPress={() => addTableColumn(index)} variant="ghost" size="sm" />
               </View>
             </View>
           )}
@@ -508,7 +508,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
                 title={block.citationId ? 'Change Citation' : 'Select Citation'}
                 onPress={() => openCitationPicker(index)}
                 variant="outline"
-                small
+                size="sm"
               />
             </View>
           )}

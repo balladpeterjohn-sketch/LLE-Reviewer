@@ -439,8 +439,8 @@ function CoverImagePicker({ uri, onPick, onRemove }: { uri?: string; onPick: () 
         <View style={styles.coverPreview}>
           <Image source={{ uri }} style={styles.coverImage} resizeMode="cover" />
           <View style={styles.coverBtns}>
-            <Button title="Change" onPress={onPick} variant="outline" small />
-            <Button title="Remove" onPress={onRemove} variant="danger" small />
+            <Button title="Change" onPress={onPick} variant="outline" size="sm" />
+            <Button title="Remove" onPress={onRemove} variant="danger" size="sm" />
           </View>
         </View>
       ) : (
