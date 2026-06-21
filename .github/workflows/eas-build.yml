@@ -17,12 +17,18 @@ jobs:
           echo "Building commit: $(git rev-parse --short HEAD)"
           git log -1 --oneline
           echo "App version: $(node -p "require('./app.json').expo.version")"
-          if grep -q "imageToolsCard" src/components/ContentEditor.tsx; then
-            echo "OK: Image Tools UI found in source"
-          else
-            echo "::error::Image Tools UI missing from source — wrong branch or old code"
+          editor="src/components/ContentEditor.tsx"
+          missing=0
+          for marker in IMAGE_SIZES getImageSize imageWrap mediaCard; do
+            if ! grep -q "$marker" "$editor"; then
+              echo "::error::Missing $marker in ContentEditor — image tools not in this build"
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 1 ]; then
             exit 1
           fi
+          echo "OK: Image tools found in source"
 
       - name: Setup Node
         uses: actions/setup-node@v4

@@ -430,6 +430,21 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
                 <Text style={styles.mediaCardTitle}>Collage</Text>
               </View>
 
+              <Text style={styles.controlLabel}>Image Size</Text>
+              <View style={styles.chipRow}>
+                {IMAGE_SIZES.map((s) => (
+                  <Pressable
+                    key={s}
+                    style={[styles.chip, getImageSize(block) === s && styles.chipActive]}
+                    onPress={() => updateBlock(index, { imageSize: s as ImageSize })}
+                  >
+                    <Text style={[styles.chipText, getImageSize(block) === s && styles.chipTextActive]}>
+                      {IMAGE_SIZE_LABELS[s]}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
               <Text style={styles.controlLabel}>Columns</Text>
               <View style={styles.chipRow}>
                 {([2, 3] as const).map((cols) => (
