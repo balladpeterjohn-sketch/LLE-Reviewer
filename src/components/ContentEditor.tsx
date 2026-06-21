@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.95)',
   },
 
-  mediaCard: {
+  mediaCard: {  /* imageToolsCard */
     backgroundColor: 'rgba(27,77,62,0.04)',
     borderRadius: 10,
     borderWidth: 1,
