@@ -50,11 +50,12 @@ function buildPageMarginCss(book: BookProject, margins: ReturnType<typeof getMar
     ? `
   @top-left {
     content: ${headerTitle};
-    font-size: 8.5pt;
+    font-size: 8pt;
     font-weight: 600;
     color: #1B4D3E;
     vertical-align: bottom;
-    padding-bottom: 4px;
+    padding-bottom: 5px;
+    font-style: italic;
   }`
     : '';
 
@@ -62,10 +63,10 @@ function buildPageMarginCss(book: BookProject, margins: ReturnType<typeof getMar
     ? `
   @top-right {
     content: ${editionLine};
-    font-size: 8pt;
-    color: #666;
+    font-size: 7.5pt;
+    color: #888;
     vertical-align: bottom;
-    padding-bottom: 4px;
+    padding-bottom: 5px;
   }`
     : '';
 
@@ -105,7 +106,7 @@ function buildPageMarginCss(book: BookProject, margins: ReturnType<typeof getMar
 
   const coverReset = `
   @page cover {
-    margin: 1.5cm;
+    margin: 0;
     @top-left { content: none; }
     @top-center { content: none; }
     @top-right { content: none; }
@@ -126,26 +127,27 @@ function buildPageMarginCss(book: BookProject, margins: ReturnType<typeof getMar
   ${coverReset}`;
 }
 
-function buildBookStyles(book: BookProject): string {
+function buildPdfStyles(book: BookProject): string {
   const margins = getMargins(book);
 
   return `
   ${buildPageMarginCss(book, margins)}
 
-  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
   html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
+    margin: 0; padding: 0; width: 100%;
     font-family: Georgia, 'Times New Roman', Times, serif;
     color: #1a1a1a;
-    line-height: 1.6;
+    line-height: 1.68;
     font-size: 11pt;
   }
 
   img { max-width: 100%; height: auto; border: 0; }
-
   .book-content { display: block; width: 100%; }
   .content-start { page-break-before: always; }
 
@@ -156,200 +158,898 @@ function buildBookStyles(book: BookProject): string {
 
   .page-break { page-break-before: always; }
 
+  /* ── TITLE PAGE ─────────────────────────────────────────── */
   .title-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 120pt 20pt 60pt;
+    padding: 72pt 48pt 56pt;
+    min-height: 560pt;
   }
 
-  .cover-label {
-    font-size: 10pt;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #C9A227;
-    margin-bottom: 36pt;
-  }
-
-  .cover-title {
-    font-size: 26pt;
-    color: #1B4D3E;
-    margin: 12pt 0;
-    line-height: 1.2;
+  .title-page-rule {
+    width: 72%;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #C9A227, transparent);
+    margin: 20pt auto;
     border: 0;
   }
 
-  .cover-subtitle { font-size: 14pt; color: #555; margin-bottom: 10pt; }
-  .cover-edition { font-size: 11pt; color: #777; margin-bottom: 36pt; }
-  .cover-author { font-size: 13pt; font-weight: 600; margin-bottom: 6pt; }
-  .cover-publisher { font-size: 10pt; color: #666; }
-  .cover-tos { font-size: 9pt; color: #999; margin-top: 48pt; }
-
-  .copyright-page { padding: 80pt 20pt 40pt; }
-
-  h2 {
-    color: #1B4D3E;
-    border-bottom: 2px solid #C9A227;
-    padding-bottom: 5px;
-    margin: 16px 0 10px;
-    font-size: 16pt;
-    page-break-after: avoid;
+  .cover-label {
+    font-size: 8.5pt;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: #C9A227;
+    margin-bottom: 20pt;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   }
 
-  h3 { color: #2D6A4F; font-size: 13pt; margin: 14px 0 8px; page-break-after: avoid; }
-  h4 { color: #2D6A4F; font-size: 12pt; margin: 12px 0 6px; page-break-after: avoid; }
+  .cover-title {
+    font-size: 30pt;
+    color: #1B4D3E;
+    margin: 0 0 10pt;
+    line-height: 1.15;
+    font-weight: bold;
+    border: 0;
+    letter-spacing: -0.5px;
+  }
+
+  .cover-subtitle {
+    font-size: 14pt;
+    color: #555;
+    margin-bottom: 8pt;
+    font-style: italic;
+    font-weight: normal;
+  }
+
+  .cover-edition {
+    font-size: 10pt;
+    color: #888;
+    margin-bottom: 0;
+    letter-spacing: 1px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  .cover-author-section { margin-top: 32pt; margin-bottom: 6pt; }
+
+  .cover-author-label {
+    font-size: 7.5pt;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 5pt;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  .cover-author {
+    font-size: 14pt;
+    font-weight: 600;
+    color: #1B4D3E;
+    margin-bottom: 6pt;
+  }
+
+  .cover-publisher {
+    font-size: 10pt;
+    color: #777;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  .cover-tos {
+    font-size: 8pt;
+    color: #bbb;
+    margin-top: 18pt;
+    font-style: italic;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── COPYRIGHT PAGE ──────────────────────────────────────── */
+  .copyright-page { padding: 80pt 20pt 40pt; }
+  .copyright-meta { font-size: 10pt; color: #777; margin-top: 8pt; line-height: 1.6; }
+
+  /* ── HEADINGS ────────────────────────────────────────────── */
+  h2 {
+    color: #1B4D3E;
+    font-size: 17pt;
+    margin: 0 0 14pt;
+    padding: 0 0 7pt;
+    border-bottom: 2.5px solid #C9A227;
+    line-height: 1.2;
+    page-break-after: avoid;
+    letter-spacing: -0.3px;
+  }
+
+  h3 {
+    color: #2D6A4F;
+    font-size: 13pt;
+    margin: 16pt 0 7pt;
+    page-break-after: avoid;
+    border-left: 3px solid #C9A227;
+    padding-left: 8pt;
+  }
+
+  h4 {
+    color: #2D6A4F;
+    font-size: 11.5pt;
+    margin: 12pt 0 5pt;
+    page-break-after: avoid;
+    font-style: italic;
+  }
 
   p {
-    margin: 0 0 9px;
+    margin: 0 0 9pt;
     text-align: justify;
     orphans: 3;
     widows: 3;
+    hyphens: auto;
   }
 
+  /* ── TABLE OF CONTENTS ───────────────────────────────────── */
   .toc-list { list-style: none; padding: 0; margin: 0; }
+
   .toc-list li {
-    margin: 6px 0;
-    padding: 2px 0 5px;
-    border-bottom: 1px dotted #ccc;
+    display: flex;
+    align-items: baseline;
+    padding: 3pt 0;
+    border-bottom: 1px dotted #ddd;
     font-size: 10.5pt;
+    gap: 4px;
   }
 
-  .toc-level-2 { padding-left: 16px; font-size: 10pt; }
+  .toc-entry-label { flex: 0 0 auto; max-width: 80%; }
+  .toc-entry-dots {
+    flex: 1 1 auto;
+    border-bottom: 1px dotted #bbb;
+    min-width: 12px;
+    margin: 0 6px;
+    position: relative;
+    top: -3px;
+  }
+
+  .toc-level-2 { padding-left: 20px; font-size: 10pt; }
   .toc-list a { color: #1B4D3E; text-decoration: none; }
 
+  /* ── PART DIVIDERS ───────────────────────────────────────── */
   .part-divider {
     text-align: center;
-    padding: 40pt 16pt;
-    margin: 12px 0;
-    background: #F7F5F0;
+    padding: 64pt 32pt 56pt;
+    margin: 0;
+    background: linear-gradient(155deg, #1B4D3E 0%, #0d2419 100%);
     page-break-inside: avoid;
   }
 
   .part-label {
-    font-size: 10pt;
+    display: block;
+    font-size: 8.5pt;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
     color: #C9A227;
+    margin-bottom: 10pt;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   }
 
-  .part-title { font-size: 18pt; color: #1B4D3E; border: 0; margin: 10px 0; }
-  .part-weight { font-size: 10pt; color: #666; }
-  .part-desc { font-size: 10pt; color: #555; margin: 10px auto 0; max-width: 90%; text-align: center; }
+  .part-ornament {
+    display: block;
+    font-size: 16pt;
+    color: rgba(201, 162, 39, 0.5);
+    margin: 6pt 0;
+    letter-spacing: 6px;
+  }
 
-  .chapter-title { font-size: 16pt; }
-  .topic-label { font-size: 9pt; color: #888; font-style: italic; margin-bottom: 12px; text-align: left; }
+  .part-title {
+    font-size: 22pt;
+    color: #FEFDF7;
+    border: 0;
+    margin: 8pt 0 10pt;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    line-height: 1.2;
+  }
 
+  .part-rule {
+    width: 56%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(201,162,39,0.5), transparent);
+    margin: 10pt auto;
+    border: 0;
+  }
+
+  .part-weight {
+    font-size: 9.5pt;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 1px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  .part-desc {
+    font-size: 10pt;
+    color: rgba(255,255,255,0.45);
+    margin: 10pt auto 0;
+    max-width: 80%;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* ── CHAPTER OPENER ──────────────────────────────────────── */
+  .chapter { position: relative; }
+
+  .chapter-num-decoration {
+    font-size: 88pt;
+    font-weight: 900;
+    color: rgba(27, 77, 62, 0.055);
+    line-height: 1;
+    text-align: right;
+    margin-bottom: -56pt;
+    position: relative;
+    z-index: 0;
+    font-family: Georgia, serif;
+    letter-spacing: -4px;
+    padding-right: 2pt;
+    page-break-after: avoid;
+  }
+
+  .chapter-title {
+    font-size: 17pt;
+    position: relative;
+    z-index: 1;
+    page-break-after: avoid;
+  }
+
+  .topic-label {
+    font-size: 8.5pt;
+    color: #999;
+    font-style: italic;
+    margin-bottom: 14pt;
+    text-align: left;
+    letter-spacing: 0.3px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    page-break-after: avoid;
+  }
+
+  .chapter-body > p:first-child::first-letter {
+    float: left;
+    font-size: 3.5em;
+    line-height: 0.82;
+    margin: 0.05em 0.08em 0 0;
+    color: #1B4D3E;
+    font-weight: bold;
+    font-family: Georgia, serif;
+  }
+
+  /* ── BLOCKQUOTES ─────────────────────────────────────────── */
   blockquote {
     border-left: 4px solid #C9A227;
-    margin: 12px 0;
-    padding: 8px 14px;
-    background: #f9f7f2;
+    margin: 14pt 0;
+    padding: 10pt 16pt 10pt 22pt;
+    background: linear-gradient(to right, #f9f7f0, #fefdf9);
     page-break-inside: avoid;
+    position: relative;
   }
 
+  blockquote::before {
+    content: '\\201C';
+    position: absolute;
+    top: -4pt;
+    left: 6pt;
+    font-size: 34pt;
+    color: #C9A227;
+    opacity: 0.35;
+    line-height: 1;
+    font-family: Georgia, serif;
+  }
+
+  blockquote p {
+    margin: 0;
+    font-style: italic;
+    color: #333;
+    padding-left: 4pt;
+  }
+
+  /* ── CALLOUTS ────────────────────────────────────────────── */
   .callout {
-    padding: 10px 14px;
-    margin: 12px 0;
+    padding: 10pt 14pt 10pt 12pt;
+    margin: 14pt 0;
     border-left: 4px solid;
     page-break-inside: avoid;
+    border-radius: 0 3px 3px 0;
   }
 
-  .callout-note { background: #E8F0EC; border-color: #1B4D3E; }
-  .callout-tip { background: #FFF8E7; border-color: #C9A227; }
+  .callout-note     { background: #EBF3EE; border-color: #1B4D3E; }
+  .callout-tip      { background: #FFF8E7; border-color: #C9A227; }
   .callout-important { background: #E8EEF8; border-color: #2D6A4F; }
-  .callout-warning { background: #FDEEEE; border-color: #C0392B; }
+  .callout-warning  { background: #FDEEEE; border-color: #C0392B; }
 
-  .footnote { font-size: 9pt; color: #666; border-top: 1px solid #eee; padding-top: 6px; }
-  .divider { border: 0; border-top: 1px solid #C9A227; margin: 16px 0; }
+  .callout-header {
+    display: flex;
+    align-items: center;
+    gap: 6pt;
+    margin-bottom: 4pt;
+  }
 
-  figure { margin: 14px 0; text-align: center; page-break-inside: avoid; }
-  figcaption { font-size: 9pt; color: #666; margin-top: 6px; font-style: italic; }
+  .callout-badge {
+    display: inline-block;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 1pt 5pt;
+    border-radius: 3px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
 
-  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
-  th { background: #1B4D3E; color: #fff; padding: 7px; text-align: left; }
-  td { border: 1px solid #ddd; padding: 7px; vertical-align: top; }
-  tr:nth-child(even) { background: #f9f9f9; }
+  .callout-note .callout-badge     { background: #1B4D3E; color: #fff; }
+  .callout-tip .callout-badge      { background: #C9A227; color: #fff; }
+  .callout-important .callout-badge { background: #2D6A4F; color: #fff; }
+  .callout-warning .callout-badge  { background: #C0392B; color: #fff; }
 
+  .callout-body { font-size: 10.5pt; color: #333; line-height: 1.55; }
+
+  /* ── FOOTNOTE / DIVIDER ──────────────────────────────────── */
+  .footnote {
+    font-size: 8.5pt;
+    color: #777;
+    border-top: 1px solid #E0DDD5;
+    padding-top: 7pt;
+    margin-top: 16pt;
+    font-style: italic;
+  }
+
+  .divider { border: 0; border-top: 1px solid rgba(201,162,39,0.4); margin: 18pt 0; }
+
+  /* ── FIGURES ─────────────────────────────────────────────── */
+  figure {
+    margin: 14pt 0;
+    text-align: center;
+    page-break-inside: avoid;
+    background: #FAFAF8;
+    padding: 10pt;
+    border: 1px solid #E8E5E0;
+  }
+
+  figcaption {
+    font-size: 8.5pt;
+    color: #777;
+    margin-top: 7pt;
+    font-style: italic;
+    text-align: center;
+    border-top: 1px solid #EEE;
+    padding-top: 5pt;
+  }
+
+  /* ── TABLES ──────────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 12pt 0; font-size: 10pt; page-break-inside: avoid; }
+
+  thead { background: #1B4D3E; }
+
+  th {
+    background: #1B4D3E;
+    color: #fff;
+    padding: 8pt 10pt;
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    font-size: 9.5pt;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  td { border: 1px solid #E0DDD5; padding: 6pt 10pt; vertical-align: top; line-height: 1.5; }
+
+  tr:nth-child(even) td { background: #F7F5F0; }
+
+  /* ── CITATIONS / BIBLIOGRAPHY ────────────────────────────── */
   .citation-ref {
     font-size: 10pt;
-    color: #444;
-    padding-left: 14px;
+    color: #555;
+    padding: 7pt 14pt;
     border-left: 3px solid #ddd;
     text-align: left;
+    background: #FAFAF8;
+    margin: 10pt 0;
+    page-break-inside: avoid;
+    font-style: italic;
   }
 
   .bib-entry {
-    font-size: 10pt;
-    text-indent: -18px;
-    padding-left: 18px;
-    margin: 6px 0;
+    font-size: 9.5pt;
+    text-indent: -20pt;
+    padding-left: 20pt;
+    margin: 7pt 0;
     text-align: left;
+    line-height: 1.55;
+    color: #333;
   }
 
-  .imgtext-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 14px 0;
-    table-layout: fixed;
-    page-break-inside: avoid;
-  }
-
+  /* ── IMAGE–TEXT LAYOUTS ──────────────────────────────────── */
+  .imgtext-table { width: 100%; border-collapse: collapse; margin: 14pt 0; table-layout: fixed; page-break-inside: avoid; }
   .imgtext-table td { vertical-align: top; border: 0; padding: 0; }
   .imgtext-table td.img-cell { padding-right: 12px; }
   .imgtext-table td.text-cell { padding-left: 4px; }
   .imgtext-table.layout-right td.img-cell { padding-right: 0; padding-left: 12px; }
   .imgtext-table.layout-right td.text-cell { padding-left: 0; padding-right: 4px; }
 
-  .stacked-block { margin: 14px 0; page-break-inside: avoid; }
-  .stacked-block .stacked-img { margin: 8px 0; text-align: center; }
+  .stacked-block { margin: 14pt 0; page-break-inside: avoid; }
+  .stacked-block .stacked-img { margin: 8pt 0; text-align: center; }
   .stacked-block .stacked-text { text-align: justify; }
   .stacked-block.layout-center .stacked-text { text-align: center; }
 
-  .wrap-block { margin: 14px 0; page-break-inside: avoid; }
+  .wrap-block { margin: 14pt 0; page-break-inside: avoid; }
   .wrap-block::after { content: ""; display: block; clear: both; }
   .wrap-block .side-text { text-align: justify; }
 
-  .side-caption { font-size: 9pt; color: #666; font-style: italic; margin-top: 6px; }
+  .side-caption { font-size: 8.5pt; color: #777; font-style: italic; margin-top: 5pt; }
 
   .collage-table { width: 100%; border-collapse: collapse; }
   .collage-table td { padding: 4px; border: 0; text-align: center; vertical-align: middle; }
 
+  /* ── MISC ────────────────────────────────────────────────── */
   .lof-list { list-style: none; padding: 0; margin: 0; }
-  .lof-list li { margin: 5px 0; font-size: 10pt; }
+  .lof-list li { margin: 5pt 0; font-size: 10pt; }
 
-  .copyright-meta { font-size: 10pt; color: #666; margin-top: 10px; }
+  .abbr-table td { padding: 5pt 10pt; border: 1px solid #E8E5E0; font-size: 10pt; }
+  .abbr-table tr:nth-child(even) td { background: #F7F5F0; }
 
+  /* ── PRINT OVERRIDES ─────────────────────────────────────── */
   @media print {
     .chapter, .front-section, .back-section { page-break-inside: auto; }
     table, blockquote, .callout, figure, .imgtext-table, .stacked-block, .wrap-block { page-break-inside: avoid; }
-  }
-
-  @media screen {
-    body {
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 16px;
-      background: #f0ede8;
-    }
-
-    .book-content {
-      background: #fff;
-      padding: 32px 36px;
-      box-shadow: 0 1px 10px rgba(0, 0, 0, 0.08);
-    }
-
-    .screen-page-hint {
-      font-size: 10px;
-      color: #888;
-      text-align: center;
-      margin-bottom: 12px;
-      font-style: italic;
-    }
+    .screen-only { display: none !important; }
   }
 `;
 }
 
-function renderRunningHead(_book: BookProject): string {
-  return `<p class="screen-page-hint">Preview: headers and page numbers appear in the exported PDF.</p>`;
+/* ── PREVIEW SCREEN STYLES ─────────────────────────────────────────────── */
+
+function buildPreviewStyles(): string {
+  return `
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    background: #18181c;
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0; padding: 0;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    color: #1a1a1a;
+    line-height: 1.68;
+    font-size: 11pt;
+    background: linear-gradient(160deg, #1e2b24 0%, #18181c 55%, #1c1820 100%);
+    min-height: 100vh;
+  }
+
+  img { max-width: 100%; height: auto; border: 0; }
+
+  /* ── READING PROGRESS BAR ──────────────────────────────── */
+  #reading-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(to right, #1B4D3E, #C9A227 50%, #1B4D3E);
+    z-index: 9999;
+    transition: width 0.12s ease;
+    box-shadow: 0 0 8px rgba(201,162,39,0.55);
+  }
+
+  /* ── CHAPTER INDICATOR ─────────────────────────────────── */
+  #chapter-indicator {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(20,40,30,0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: rgba(255,255,255,0.8);
+    font-size: 10px;
+    font-family: Georgia, serif;
+    font-style: italic;
+    padding: 6px 18px;
+    text-align: center;
+    z-index: 9998;
+    border-top: 1px solid rgba(201,162,39,0.25);
+    opacity: 0;
+    transform: translateY(100%);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  #chapter-indicator.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── BOOK OUTER WRAPPER (spine + pages) ────────────────── */
+  .book-outer-wrapper {
+    position: relative;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 0 80px 14px;
+  }
+
+  /* Book spine on left */
+  .book-outer-wrapper::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 28px;
+    bottom: 80px;
+    width: 14px;
+    background: linear-gradient(to right, #0a1a11 0%, #1B4D3E 45%, #2D6A4F 72%, #1B4D3E 100%);
+    border-radius: 4px 0 0 4px;
+    box-shadow: -3px 0 10px rgba(0,0,0,0.55), inset 3px 0 6px rgba(255,255,255,0.08);
+  }
+
+  /* ── INDIVIDUAL BOOK PAGES ─────────────────────────────── */
+  .book-page {
+    background: #FDFCF7;
+    padding: 52px 64px 68px;
+    margin-bottom: 5px;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.62s cubic-bezier(0.16,1,0.3,1), transform 0.62s cubic-bezier(0.16,1,0.3,1);
+    box-shadow:
+      4px 4px 16px rgba(0,0,0,0.32),
+      -1px 2px 6px rgba(0,0,0,0.18),
+      inset -3px 0 10px rgba(0,0,0,0.04);
+  }
+
+  .book-page.page-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Staggered delay for adjacent pages */
+  .book-page:nth-child(2) { transition-delay: 0.06s; }
+  .book-page:nth-child(3) { transition-delay: 0.10s; }
+  .book-page:nth-child(4) { transition-delay: 0.14s; }
+
+  /* Page fold corner */
+  .book-page::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 30px; height: 30px;
+    background: linear-gradient(225deg, #d5d2cb 50%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* Page gutter shadow (binding side) */
+  .book-page::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 18px;
+    background: linear-gradient(to right, rgba(0,0,0,0.06), transparent);
+    pointer-events: none;
+  }
+
+  /* Page number at bottom center */
+  .book-page-num {
+    position: absolute;
+    bottom: 14px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 8pt;
+    color: #aaa;
+    font-style: italic;
+    font-family: Georgia, serif;
+    pointer-events: none;
+  }
+
+  /* ── COVER PAGES ───────────────────────────────────────── */
+  .book-page.cover-book-page {
+    background: linear-gradient(158deg, #1B4D3E 0%, #0d2219 100%);
+    box-shadow: 4px 4px 20px rgba(0,0,0,0.45), -1px 2px 8px rgba(0,0,0,0.25);
+  }
+
+  .book-page.cover-book-page .cover-title { color: #F0E8CC; text-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+  .book-page.cover-book-page .cover-label { color: #C9A227; }
+  .book-page.cover-book-page .cover-subtitle { color: rgba(255,255,255,0.7); font-style: italic; }
+  .book-page.cover-book-page .cover-edition { color: rgba(255,255,255,0.5); }
+  .book-page.cover-book-page .cover-author { color: #E8D5A0; }
+  .book-page.cover-book-page .cover-author-label { color: rgba(255,255,255,0.4); }
+  .book-page.cover-book-page .cover-publisher { color: rgba(255,255,255,0.5); }
+  .book-page.cover-book-page .cover-tos { color: rgba(255,255,255,0.32); }
+  .book-page.cover-book-page .title-page-rule { background: linear-gradient(to right, transparent, rgba(201,162,39,0.55), transparent); }
+  .book-page.cover-book-page .copyright-meta,
+  .book-page.cover-book-page p,
+  .book-page.cover-book-page h2 { color: rgba(255,255,255,0.75); border-bottom-color: rgba(201,162,39,0.3); }
+  .book-page.cover-book-page .book-page-num { color: rgba(255,255,255,0.25); }
+  .book-page.cover-book-page::after { background: linear-gradient(225deg, rgba(0,0,0,0.25) 50%, transparent 50%); }
+
+  /* ── SCREEN HINT ───────────────────────────────────────── */
+  .screen-page-hint {
+    background: rgba(27,77,62,0.12);
+    border: 1px solid rgba(27,77,62,0.2);
+    border-radius: 5px;
+    padding: 7px 14px;
+    font-size: 9.5px;
+    color: #5a8a7a;
+    text-align: center;
+    margin: 8px 0 12px;
+    font-style: italic;
+  }
+
+  /* ── TYPOGRAPHY ────────────────────────────────────────── */
+  h2 {
+    color: #1B4D3E;
+    font-size: 17pt;
+    margin: 0 0 14pt;
+    padding: 0 0 7pt;
+    border-bottom: 2.5px solid #C9A227;
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+  }
+
+  h3 {
+    color: #2D6A4F;
+    font-size: 13pt;
+    margin: 16pt 0 7pt;
+    border-left: 3px solid #C9A227;
+    padding-left: 8pt;
+  }
+
+  h4 { color: #2D6A4F; font-size: 11.5pt; margin: 12pt 0 5pt; font-style: italic; }
+
+  p { margin: 0 0 9pt; text-align: justify; }
+
+  blockquote {
+    border-left: 4px solid #C9A227;
+    margin: 14pt 0;
+    padding: 10pt 16pt 10pt 22pt;
+    background: linear-gradient(to right, #f9f7f0, #fefdf9);
+    position: relative;
+  }
+
+  blockquote::before {
+    content: '\\201C';
+    position: absolute;
+    top: -4pt; left: 6pt;
+    font-size: 34pt;
+    color: #C9A227;
+    opacity: 0.35;
+    line-height: 1;
+    font-family: Georgia, serif;
+  }
+
+  blockquote p { margin: 0; font-style: italic; color: #333; padding-left: 4pt; }
+
+  .callout { padding: 10pt 14pt 10pt 12pt; margin: 14pt 0; border-left: 4px solid; border-radius: 0 3px 3px 0; }
+  .callout-note     { background: #EBF3EE; border-color: #1B4D3E; }
+  .callout-tip      { background: #FFF8E7; border-color: #C9A227; }
+  .callout-important { background: #E8EEF8; border-color: #2D6A4F; }
+  .callout-warning  { background: #FDEEEE; border-color: #C0392B; }
+
+  .callout-header { display: flex; align-items: center; gap: 6pt; margin-bottom: 4pt; }
+  .callout-badge {
+    display: inline-block;
+    font-size: 8pt; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 1pt 5pt; border-radius: 3px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  .callout-note .callout-badge     { background: #1B4D3E; color: #fff; }
+  .callout-tip .callout-badge      { background: #C9A227; color: #fff; }
+  .callout-important .callout-badge { background: #2D6A4F; color: #fff; }
+  .callout-warning .callout-badge  { background: #C0392B; color: #fff; }
+  .callout-body { font-size: 10.5pt; color: #333; line-height: 1.55; }
+
+  .footnote { font-size: 8.5pt; color: #777; border-top: 1px solid #E0DDD5; padding-top: 7pt; margin-top: 16pt; font-style: italic; }
+  .divider { border: 0; border-top: 1px solid rgba(201,162,39,0.4); margin: 18pt 0; }
+
+  figure { margin: 14pt 0; text-align: center; background: #FAFAF8; padding: 10pt; border: 1px solid #E8E5E0; }
+  figcaption { font-size: 8.5pt; color: #777; margin-top: 7pt; font-style: italic; text-align: center; border-top: 1px solid #EEE; padding-top: 5pt; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12pt 0; font-size: 10pt; }
+  thead { background: #1B4D3E; }
+  th { background: #1B4D3E; color: #fff; padding: 8pt 10pt; text-align: left; font-weight: 600; font-size: 9.5pt; }
+  td { border: 1px solid #E0DDD5; padding: 6pt 10pt; vertical-align: top; line-height: 1.5; }
+  tr:nth-child(even) td { background: #F7F5F0; }
+
+  .citation-ref { font-size: 10pt; color: #555; padding: 7pt 14pt; border-left: 3px solid #ddd; background: #FAFAF8; margin: 10pt 0; font-style: italic; }
+  .bib-entry { font-size: 9.5pt; text-indent: -20pt; padding-left: 20pt; margin: 7pt 0; line-height: 1.55; color: #333; }
+
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list li { display: flex; align-items: baseline; padding: 3pt 0; border-bottom: 1px dotted #ddd; font-size: 10.5pt; gap: 4px; }
+  .toc-entry-label { flex: 0 0 auto; max-width: 80%; }
+  .toc-entry-dots { flex: 1 1 auto; border-bottom: 1px dotted #bbb; min-width: 12px; margin: 0 6px; position: relative; top: -3px; }
+  .toc-level-2 { padding-left: 20px; font-size: 10pt; }
+  .toc-list a { color: #1B4D3E; text-decoration: none; }
+
+  .part-divider { text-align: center; padding: 56pt 32pt 48pt; background: linear-gradient(155deg, #1B4D3E 0%, #0d2419 100%); }
+  .part-label { display: block; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 4px; color: #C9A227; margin-bottom: 10pt; }
+  .part-ornament { display: block; font-size: 16pt; color: rgba(201,162,39,0.5); margin: 6pt 0; letter-spacing: 6px; }
+  .part-title { font-size: 22pt; color: #FEFDF7; border: 0; margin: 8pt 0 10pt; }
+  .part-rule { width: 56%; height: 1px; background: linear-gradient(to right, transparent, rgba(201,162,39,0.5), transparent); margin: 10pt auto; border: 0; }
+  .part-weight { font-size: 9.5pt; color: rgba(255,255,255,0.55); letter-spacing: 1px; }
+  .part-desc { font-size: 10pt; color: rgba(255,255,255,0.45); margin: 10pt auto 0; max-width: 80%; text-align: center; font-style: italic; }
+
+  .chapter { position: relative; }
+  .chapter-num-decoration { font-size: 88pt; font-weight: 900; color: rgba(27,77,62,0.055); line-height: 1; text-align: right; margin-bottom: -56pt; position: relative; z-index: 0; font-family: Georgia, serif; letter-spacing: -4px; }
+  .chapter-title { font-size: 17pt; position: relative; z-index: 1; }
+  .topic-label { font-size: 8.5pt; color: #999; font-style: italic; margin-bottom: 14pt; letter-spacing: 0.3px; }
+
+  .chapter-body > p:first-child::first-letter { float: left; font-size: 3.5em; line-height: 0.82; margin: 0.05em 0.08em 0 0; color: #1B4D3E; font-weight: bold; font-family: Georgia, serif; }
+
+  .title-page { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 40px 50px; min-height: 360px; }
+  .title-page-rule { width: 72%; height: 2px; border: 0; margin: 16pt auto; }
+  .cover-label { font-size: 8.5pt; letter-spacing: 3.5px; text-transform: uppercase; color: #C9A227; margin-bottom: 18pt; }
+  .cover-title { font-size: 26pt; color: #1B4D3E; margin: 0 0 10pt; line-height: 1.15; font-weight: bold; border: 0; }
+  .cover-subtitle { font-size: 13pt; color: #555; margin-bottom: 8pt; font-style: italic; }
+  .cover-edition { font-size: 10pt; color: #888; margin-bottom: 0; letter-spacing: 1px; }
+  .cover-author-section { margin-top: 28pt; margin-bottom: 6pt; }
+  .cover-author-label { font-size: 7.5pt; letter-spacing: 2.5px; text-transform: uppercase; color: #aaa; margin-bottom: 5pt; }
+  .cover-author { font-size: 13pt; font-weight: 600; color: #1B4D3E; margin-bottom: 6pt; }
+  .cover-publisher { font-size: 10pt; color: #777; }
+  .cover-tos { font-size: 8pt; color: #bbb; margin-top: 16pt; font-style: italic; }
+
+  .copyright-page { padding: 60px 0 40px; }
+  .copyright-meta { font-size: 10pt; color: #777; margin-top: 8pt; line-height: 1.6; }
+
+  .lof-list { list-style: none; padding: 0; margin: 0; }
+  .lof-list li { margin: 5pt 0; font-size: 10pt; }
+
+  .abbr-table td { padding: 5pt 10pt; border: 1px solid #E8E5E0; font-size: 10pt; }
+  .abbr-table tr:nth-child(even) td { background: #F7F5F0; }
+
+  .imgtext-table { width: 100%; border-collapse: collapse; margin: 14pt 0; table-layout: fixed; }
+  .imgtext-table td { vertical-align: top; border: 0; padding: 0; }
+  .imgtext-table td.img-cell { padding-right: 12px; }
+  .imgtext-table td.text-cell { padding-left: 4px; }
+  .imgtext-table.layout-right td.img-cell { padding-right: 0; padding-left: 12px; }
+  .imgtext-table.layout-right td.text-cell { padding-left: 0; padding-right: 4px; }
+
+  .stacked-block { margin: 14pt 0; }
+  .stacked-block .stacked-img { margin: 8pt 0; text-align: center; }
+  .stacked-block .stacked-text { text-align: justify; }
+  .stacked-block.layout-center .stacked-text { text-align: center; }
+
+  .wrap-block { margin: 14pt 0; }
+  .wrap-block::after { content: ""; display: block; clear: both; }
+  .wrap-block .side-text { text-align: justify; }
+  .side-caption { font-size: 8.5pt; color: #777; font-style: italic; margin-top: 5pt; }
+
+  .collage-table { width: 100%; border-collapse: collapse; }
+  .collage-table td { padding: 4px; border: 0; text-align: center; vertical-align: middle; }
+
+  @media (max-width: 480px) {
+    .book-page { padding: 36px 28px 52px; }
+    .book-outer-wrapper { padding-left: 10px; }
+    .book-outer-wrapper::before { width: 10px; }
+  }
+`;
 }
+
+/* ── JAVASCRIPT FOR PREVIEW ANIMATIONS ────────────────────────────────── */
+
+function buildPreviewScript(): string {
+  return `
+(function () {
+  'use strict';
+
+  function wrapInBookPages() {
+    var selectorList = [
+      '.cover-page',
+      '.front-section',
+      '.toc',
+      '.part-divider',
+      '.chapter',
+      '.back-section',
+      '.bibliography'
+    ];
+    var allSections = document.querySelectorAll(selectorList.join(','));
+    var pageNum = 0;
+
+    allSections.forEach(function (section) {
+      if (section.parentElement && section.parentElement.classList.contains('book-page')) return;
+
+      pageNum++;
+      var wrapper = document.createElement('div');
+      wrapper.className = 'book-page';
+
+      if (section.classList.contains('cover-page')) {
+        wrapper.classList.add('cover-book-page');
+      }
+
+      section.parentNode.insertBefore(wrapper, section);
+      wrapper.appendChild(section);
+
+      var numEl = document.createElement('div');
+      numEl.className = 'book-page-num';
+      numEl.textContent = String(pageNum);
+      wrapper.appendChild(numEl);
+    });
+  }
+
+  function wrapBookContent() {
+    var coverPages = document.querySelector('.cover-pages');
+    var mainContent = document.querySelector('.book-content');
+    if (!coverPages && !mainContent) return;
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'book-outer-wrapper';
+
+    var ref = coverPages || mainContent;
+    ref.parentNode.insertBefore(wrapper, ref);
+    if (coverPages) wrapper.appendChild(coverPages);
+    if (mainContent) wrapper.appendChild(mainContent);
+  }
+
+  function setupProgressBar() {
+    var bar = document.createElement('div');
+    bar.id = 'reading-progress';
+    document.body.insertBefore(bar, document.body.firstChild);
+
+    window.addEventListener('scroll', function () {
+      var scrolled = window.scrollY || window.pageYOffset;
+      var total = document.documentElement.scrollHeight - window.innerHeight;
+      var pct = total > 0 ? Math.min(100, (scrolled / total) * 100) : 0;
+      bar.style.width = pct + '%';
+    }, { passive: true });
+  }
+
+  function setupChapterIndicator() {
+    var indicator = document.createElement('div');
+    indicator.id = 'chapter-indicator';
+    document.body.appendChild(indicator);
+    return indicator;
+  }
+
+  function setupPageAnimations(indicator) {
+    var pages = document.querySelectorAll('.book-page');
+
+    if (!window.IntersectionObserver) {
+      pages.forEach(function (p) { p.classList.add('page-visible'); });
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('page-visible');
+        observer.unobserve(entry.target);
+
+        var heading = entry.target.querySelector('h2, h1');
+        if (heading && indicator) {
+          indicator.textContent = heading.textContent || '';
+          indicator.classList.add('visible');
+        }
+
+        if (window.ReactNativeWebView) {
+          var section = entry.target.querySelector('[id]');
+          try {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'pageVisible',
+              title: heading ? (heading.textContent || '') : '',
+              id: section ? section.id : ''
+            }));
+          } catch (e) { /* ignore */ }
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+
+    pages.forEach(function (page) { observer.observe(page); });
+  }
+
+  function init() {
+    wrapBookContent();
+    wrapInBookPages();
+    setupProgressBar();
+    var indicator = setupChapterIndicator();
+    setupPageAnimations(indicator);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+}());
+`;
+}
+
+/* ── SHARED RENDERING HELPERS ──────────────────────────────────────────── */
 
 function renderWrapImageBlock(
   block: ContentBlock,
@@ -488,7 +1188,8 @@ function renderBlock(block: ContentBlock, citations: Map<string, Citation>): str
     case 'callout': {
       const variant = block.calloutVariant ?? 'note';
       const label = variant.charAt(0).toUpperCase() + variant.slice(1);
-      return `<div class="callout callout-${variant}"><strong>${label}:</strong> ${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</div>`;
+      const body = escapeHtml(block.text ?? '').replace(/\n/g, '<br/>');
+      return `<div class="callout callout-${variant}"><div class="callout-header"><span class="callout-badge">${label}</span></div><div class="callout-body">${body}</div></div>`;
     }
     case 'footnote':
       return `<p class="footnote"><sup>*</sup> ${escapeHtml(block.text ?? '')}</p>`;
@@ -581,23 +1282,29 @@ function buildTocEntries(book: BookProject, materials: ReadingMaterial[]): TocEn
 
 function renderToc(entries: TocEntry[]): string {
   const items = entries
-    .map(
-      (e) =>
-        `<li class="toc-level-${e.level}"><a href="#${e.id}">${escapeHtml(e.label)}</a></li>`
-    )
+    .map((e) => {
+      const label = escapeHtml(e.label);
+      return `<li class="toc-level-${e.level}"><a href="#${e.id}" class="toc-link"><span class="toc-entry-label">${label}</span><span class="toc-entry-dots"></span></a></li>`;
+    })
     .join('');
   return `<div class="toc page-break" id="toc"><h2>Table of Contents</h2><ul class="toc-list">${items}</ul></div>`;
 }
 
 function renderTitlePage(book: BookProject): string {
   const s = book.settings;
+  const editionParts = [s.edition, s.year].filter(Boolean).join(' \u00B7 ');
   return `
     <div class="title-page cover-page" id="title-page">
+      <hr class="title-page-rule"/>
       <p class="cover-label">Librarians Licensure Examination Reviewer</p>
       <h1 class="cover-title">${escapeHtml(book.title)}</h1>
       ${book.subtitle ? `<p class="cover-subtitle">${escapeHtml(book.subtitle)}</p>` : ''}
-      <p class="cover-edition">${escapeHtml(s.edition ?? '')}${s.year ? ` · ${escapeHtml(s.year)}` : ''}</p>
-      <p class="cover-author">Compiled by ${escapeHtml(book.author)}</p>
+      ${editionParts ? `<p class="cover-edition">${escapeHtml(editionParts)}</p>` : ''}
+      <hr class="title-page-rule"/>
+      <div class="cover-author-section">
+        <p class="cover-author-label">Compiled by</p>
+        <p class="cover-author">${escapeHtml(book.author)}</p>
+      </div>
       ${s.publisher ? `<p class="cover-publisher">${escapeHtml(s.publisher)}</p>` : ''}
       <p class="cover-tos">Based on PRC Board for Librarians Table of Specifications</p>
     </div>`;
@@ -607,7 +1314,7 @@ function renderCopyrightPage(book: BookProject): string {
   const year = book.settings.year ?? new Date().getFullYear().toString();
   const notice =
     book.settings.copyrightNotice?.trim() ||
-    `© ${year} ${book.author}. All rights reserved.`;
+    `\u00A9 ${year} ${book.author}. All rights reserved.`;
   return `
     <div class="copyright-page cover-page" id="copyright">
       <h2>Copyright</h2>
@@ -652,7 +1359,7 @@ function renderListOfFigures(materials: ReadingMaterial[]): string {
       if (b.type === 'image' || b.type === 'image-collage' || b.type === 'image-text') {
         fig++;
         const cap = b.caption || m.title;
-        items.push(`<li>Figure ${fig}: ${escapeHtml(cap)} <span class="toc-dots"></span> ${escapeHtml(m.title)}</li>`);
+        items.push(`<li>Figure ${fig}: ${escapeHtml(cap)} &mdash; ${escapeHtml(m.title)}</li>`);
       }
     }
   }
@@ -667,17 +1374,21 @@ function renderMaterial(
   settings: BookProject['settings']
 ): string {
   const topicInfo = findTopic(material.subjectId, material.topicId);
-  const topicLabel = topicInfo ? `${topicInfo.topic.code} ${topicInfo.topic.title}` : '';
+  const topicLabel = topicInfo ? `${topicInfo.topic.code} \u2014 ${topicInfo.topic.title}` : '';
   const chapterTitle = settings.numberChapters
     ? `Chapter ${chapterNum}: ${material.title}`
     : material.title;
   const blocksHtml = material.blocks.map((b) => renderBlock(b, citations)).join('\n');
+  const chapNumDecoration = settings.numberChapters
+    ? `<div class="chapter-num-decoration">${chapterNum}</div>`
+    : '';
 
   return `
     <section class="chapter page-break" id="ch-${material.id}">
+      ${chapNumDecoration}
       <h2 class="chapter-title">${escapeHtml(chapterTitle)}</h2>
-      <p class="topic-label">${escapeHtml(topicLabel)}</p>
-      ${blocksHtml}
+      ${topicLabel ? `<p class="topic-label">${escapeHtml(topicLabel)}</p>` : ''}
+      <div class="chapter-body">${blocksHtml}</div>
     </section>`;
 }
 
@@ -699,11 +1410,14 @@ function renderBody(
     if (book.settings.groupBySubject && material.subjectId !== lastSubject) {
       const subject = findSubject(material.subjectId);
       if (subject) {
+        const partNum = TOS_SUBJECTS.findIndex((s) => s.id === material.subjectId) + 1;
         parts.push(`
           <div class="part-divider page-break" id="part-${material.subjectId}">
-            <p class="part-label">Part ${TOS_SUBJECTS.findIndex((s) => s.id === material.subjectId) + 1}</p>
+            <span class="part-label">Part ${partNum}</span>
+            <span class="part-ornament">\u2736 \u2736 \u2736</span>
             <h2 class="part-title">${escapeHtml(subject.title)}</h2>
-            <p class="part-weight">Exam Weight: ${subject.weight}% · Day ${subject.examDay}</p>
+            <hr class="part-rule"/>
+            <p class="part-weight">Exam Weight: ${subject.weight}% &nbsp;\u00B7&nbsp; Day ${subject.examDay}</p>
             <p class="part-desc">${escapeHtml(subject.description)}</p>
           </div>`);
         lastSubject = material.subjectId;
@@ -759,12 +1473,13 @@ function renderBibliography(
   return `<div class="back-section page-break bibliography" id="references"><h2>References</h2>${entries}</div>`;
 }
 
-export function buildBookHtml(
-  rawBook: BookProject,
+/* ── SHARED CONTENT ASSEMBLY ───────────────────────────────────────────── */
+
+function assembleContentParts(
+  book: BookProject,
   materials: ReadingMaterial[],
   allCitations: Citation[]
-): string {
-  const book = normalizeBook(rawBook);
+): { coverParts: string[]; contentParts: string[] } {
   const citationMap = new Map(allCitations.map((c) => [c.id, c]));
   const s = book.settings;
   const fm = book.frontMatter;
@@ -795,23 +1510,61 @@ export function buildBookHtml(
     contentParts.push(renderFrontSection('about-author', 'About the Author', bm.aboutAuthor));
   }
 
-  const runningHead = renderRunningHead(book);
+  return { coverParts, contentParts };
+}
+
+/* ── PUBLIC HTML BUILDERS ──────────────────────────────────────────────── */
+
+export function buildBookHtml(
+  rawBook: BookProject,
+  materials: ReadingMaterial[],
+  allCitations: Citation[]
+): string {
+  const book = normalizeBook(rawBook);
+  const { coverParts, contentParts } = assembleContentParts(book, materials, allCitations);
+  const pageWidth = getPageDimensions(book).width;
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=${getPageDimensions(book).width}, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="viewport" content="width=${pageWidth}, initial-scale=1.0, maximum-scale=1.0"/>
   <title>${escapeHtml(book.title)}</title>
-  <style>${buildBookStyles(book)}</style>
+  <style>${buildPdfStyles(book)}</style>
 </head>
 <body>
   <div class="cover-pages">${coverParts.join('\n')}</div>
-  ${runningHead}
   <main class="book-content content-start">${contentParts.join('\n')}</main>
 </body>
 </html>`;
 }
+
+export function buildBookPreviewHtml(
+  rawBook: BookProject,
+  materials: ReadingMaterial[],
+  allCitations: Citation[]
+): string {
+  const book = normalizeBook(rawBook);
+  const { coverParts, contentParts } = assembleContentParts(book, materials, allCitations);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=3.0, user-scalable=yes"/>
+  <title>${escapeHtml(book.title)}</title>
+  <style>${buildPreviewStyles()}</style>
+</head>
+<body>
+  <div class="cover-pages">${coverParts.join('\n')}</div>
+  <p class="screen-page-hint">Scroll to read &bull; Headers and page numbers appear in the exported PDF</p>
+  <main class="book-content">${contentParts.join('\n')}</main>
+  <script>${buildPreviewScript()}</script>
+</body>
+</html>`;
+}
+
+/* ── PDF EXPORT ────────────────────────────────────────────────────────── */
 
 export async function exportBookToPdf(
   book: BookProject,
