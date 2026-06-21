@@ -437,6 +437,8 @@ function renderCollageContent(block: ContentBlock): string {
   const uris = block.imageUris ?? [];
   if (uris.length === 0) return '';
   const cols = block.collageColumns ?? 2;
+  const size = getImageSize(block);
+  const maxH = size === 'small' ? '100px' : size === 'large' ? '180px' : size === 'full' ? '220px' : '140px';
   const cellWidth = cols === 2 ? '50%' : '33%';
   const rows: string[] = [];
 
@@ -445,7 +447,7 @@ function renderCollageContent(block: ContentBlock): string {
     const cells = slice
       .map(
         (uri) =>
-          `<td width="${cellWidth}" align="center" valign="middle"><img src="${uri}" alt="Collage" style="max-width:100%;max-height:150px;height:auto;display:block;margin:0 auto;" /></td>`
+          `<td width="${cellWidth}" align="center" valign="middle"><img src="${uri}" alt="Collage" style="max-width:100%;max-height:${maxH};height:auto;display:block;margin:0 auto;" /></td>`
       )
       .join('');
     const padding = cols - slice.length;

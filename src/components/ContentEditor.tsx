@@ -64,6 +64,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
     if (type === 'image-collage') {
       block.imageUris = [];
       block.collageColumns = 2;
+      block.imageSize = 'small';
     }
     if (type === 'callout') {
       block.text = '';
@@ -299,14 +300,20 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
           )}
 
           {block.type === 'image' && (
-            <View>
-              <Text style={styles.controlLabel}>Image size</Text>
-              <Text style={styles.controlHint}>Tap Small, Medium, Large, or Full to resize</Text>
+            <View style={styles.imageToolsCard}>
+              <View style={styles.imageToolsBanner}>
+                <Ionicons name="resize" size={18} color={colors.primary} />
+                <Text style={styles.imageToolsTitle}>Image Tools</Text>
+              </View>
+              <Text style={styles.controlLabel}>Size</Text>
               <OptionChips
                 options={IMAGE_SIZES.map((s) => ({ value: s, label: IMAGE_SIZE_LABELS[s] }))}
                 selected={getImageSize(block)}
                 onSelect={(size) => updateBlock(index, { imageSize: size as ImageSize })}
               />
+              <Text style={styles.controlHint}>
+                Small = compact · Full = page width. Changes apply in preview and PDF.
+              </Text>
               {block.imageUri ? (
                 <Image
                   source={{ uri: block.imageUri }}
@@ -332,7 +339,11 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
           )}
 
           {block.type === 'image-text' && (
-            <View>
+            <View style={styles.imageToolsCard}>
+              <View style={styles.imageToolsBanner}>
+                <Ionicons name="images" size={18} color={colors.primary} />
+                <Text style={styles.imageToolsTitle}>Image + Text Tools</Text>
+              </View>
               <Text style={styles.controlLabel}>Layout</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionScroll}>
                 <OptionChips
@@ -343,13 +354,15 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
                   }
                 />
               </ScrollView>
-              <Text style={styles.controlLabel}>Image size</Text>
-              <Text style={styles.controlHint}>Tap Small, Medium, Large, or Full to resize</Text>
+              <Text style={styles.controlLabel}>Size</Text>
               <OptionChips
                 options={IMAGE_SIZES.map((s) => ({ value: s, label: IMAGE_SIZE_LABELS[s] }))}
                 selected={getImageSize(block)}
                 onSelect={(size) => updateBlock(index, { imageSize: size as ImageSize })}
               />
+              <Text style={styles.controlHint}>
+                Use Small or Medium for side-by-side layouts. Tap Layout to change position.
+              </Text>
               <ImageTextEditorPreview
                 block={block}
                 onPickImage={() => pickImage(index)}
@@ -366,9 +379,19 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
           )}
 
           {block.type === 'image-collage' && (
-            <View>
-              <View style={styles.positionRow}>
-                <Text style={styles.positionLabel}>Columns:</Text>
+            <View style={styles.imageToolsCard}>
+              <View style={styles.imageToolsBanner}>
+                <Ionicons name="grid" size={18} color={colors.primary} />
+                <Text style={styles.imageToolsTitle}>Collage Tools</Text>
+              </View>
+              <Text style={styles.controlLabel}>Size</Text>
+              <OptionChips
+                options={IMAGE_SIZES.map((s) => ({ value: s, label: IMAGE_SIZE_LABELS[s] }))}
+                selected={getImageSize(block)}
+                onSelect={(size) => updateBlock(index, { imageSize: size as ImageSize })}
+              />
+              <Text style={styles.controlLabel}>Columns</Text>
+              <View style={styles.headingLevels}>
                 {([2, 3] as const).map((cols) => (
                   <Pressable
                     key={cols}
@@ -714,7 +737,26 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   controlLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: spacing.xs },
-  controlHint: { fontSize: 12, color: colors.textSecondary, marginBottom: spacing.sm },
+  controlHint: { fontSize: 12, color: colors.textSecondary, marginBottom: spacing.sm, lineHeight: 18 },
+  imageToolsCard: {
+    backgroundColor: '#F7FAF8',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  imageToolsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  imageToolsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   optionScroll: { flexGrow: 0, marginBottom: spacing.sm },
   optionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   image: { borderRadius: 8, backgroundColor: '#EEE' },

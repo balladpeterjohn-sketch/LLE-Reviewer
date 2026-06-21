@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -85,6 +86,8 @@ export default function HomeScreen() {
           with a passing average of 75%.
         </Text>
       </Card>
+
+      <Text style={styles.versionText}>App version {Constants.expoConfig?.version ?? '1.1.0'}</Text>
     </ScrollView>
   );
 }
@@ -145,4 +148,5 @@ const styles = StyleSheet.create({
   infoCard: { marginTop: spacing.sm },
   infoTitle: { fontSize: 15, fontWeight: '600', color: colors.primary, marginBottom: spacing.sm },
   infoText: { fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
+  versionText: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm },
 });

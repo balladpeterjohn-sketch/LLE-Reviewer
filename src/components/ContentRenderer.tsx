@@ -130,6 +130,8 @@ function BlockView({
     case 'image-collage': {
       const uris = block.imageUris ?? [];
       const cols = block.collageColumns ?? 2;
+      const size = getImageSize(block);
+      const thumbHeight = size === 'small' ? 80 : size === 'large' ? 150 : size === 'full' ? 180 : 110;
       if (uris.length === 0) return null;
       return (
         <View style={styles.figure}>
@@ -140,6 +142,7 @@ function BlockView({
                 source={{ uri }}
                 style={[
                   styles.collageImage,
+                  { height: thumbHeight },
                   cols === 2 ? styles.collageTwo : styles.collageThree,
                 ]}
                 resizeMode="cover"

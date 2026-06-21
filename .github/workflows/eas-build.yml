@@ -9,6 +9,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Show build commit
+        run: |
+          echo "Building commit: $(git rev-parse --short HEAD)"
+          git log -1 --oneline
+          grep -n "imageToolsCard\|IMAGE_SIZES" src/components/ContentEditor.tsx | head -3 || echo "WARNING image tools not found in source"
 
       - name: Setup Node
         uses: actions/setup-node@v4
