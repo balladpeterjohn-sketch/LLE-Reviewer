@@ -1,4 +1,4 @@
-import { ContentBlock, ImageLayout, ImageSize } from '../types';
+import { ContentBlock, ImageLayout, ImageSize, ImageWrap } from '../types';
 
 export const IMAGE_SIZES: ImageSize[] = ['small', 'medium', 'large', 'full'];
 
@@ -24,8 +24,8 @@ export const IMAGE_LAYOUT_LABELS: Record<ImageLayout, string> = {
   right: 'Right',
   top: 'Top',
   bottom: 'Bottom',
-  'wrap-left': 'Wrap L',
-  'wrap-right': 'Wrap R',
+  'wrap-left': 'Text wrap L',
+  'wrap-right': 'Text wrap R',
   center: 'Center',
 };
 
@@ -87,6 +87,23 @@ export function getNativeFullImageStyle(size: ImageSize): {
     default:
       return { width: '60%', height: 170, alignSelf: 'center' };
   }
+}
+
+export const IMAGE_WRAP_OPTIONS: ImageWrap[] = ['none', 'wrap-left', 'wrap-right'];
+
+export const IMAGE_WRAP_LABELS: Record<ImageWrap, string> = {
+  none: 'No wrap',
+  'wrap-left': 'Wrap left',
+  'wrap-right': 'Wrap right',
+};
+
+export function getImageWrap(block: ContentBlock): ImageWrap {
+  return block.imageWrap ?? 'none';
+}
+
+export function hasImageWrapText(block: ContentBlock): boolean {
+  const wrap = getImageWrap(block);
+  return (wrap === 'wrap-left' || wrap === 'wrap-right') && !!block.text?.trim();
 }
 
 export function getImageSizeClass(size: ImageSize): string {

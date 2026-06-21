@@ -120,6 +120,18 @@ export default function BookSettingsScreen() {
           value={book.settings.includePageNumbers !== false}
           onChange={(v) => updateSettings({ includePageNumbers: v })}
         />
+        <Text style={styles.subLabel}>Page Number Position</Text>
+        <OptionRow
+          options={[
+            { value: 'outer', label: 'Outer (book style)' },
+            { value: 'center', label: 'Center' },
+          ]}
+          selected={book.settings.pageNumberPlacement ?? 'outer'}
+          onSelect={(v) => updateSettings({ pageNumberPlacement: v as 'outer' | 'center' })}
+        />
+        <Text style={styles.hintText}>
+          Outer places numbers on the left for verso (even) pages and right for recto (odd) pages.
+        </Text>
         <Field
           label="Header Title (optional override)"
           value={book.settings.headerText ?? ''}
@@ -403,6 +415,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   subLabel: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.md, marginBottom: spacing.sm },
+  hintText: { fontSize: 12, color: colors.textSecondary, marginBottom: spacing.md, lineHeight: 18 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   optionChip: {
     paddingHorizontal: spacing.md,

@@ -33,24 +33,104 @@ function getMargins(book: BookProject) {
   return MARGIN_PRESETS[book.settings.marginPreset ?? 'standard'];
 }
 
-function buildBookStyles(book: BookProject): string {
+function cssQuote(text: string): string {
+  return `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+function buildPageMarginCss(book: BookProject, margins: ReturnType<typeof getMargins>): string {
   const s = book.settings;
-  const page = getPageDimensions(book);
-  const margins = getMargins(book);
-  const showRunning = s.includeRunningHeader !== false;
+  const showHeader = s.includeRunningHeader !== false;
   const showPages = s.includePageNumbers !== false;
-  const pageTop = showRunning ? '2.7cm' : margins.top;
-  const pageBottom = showPages ? '2.0cm' : margins.bottom;
+  const placement = s.pageNumberPlacement ?? 'outer';
+
+  const headerTitle = cssQuote(s.headerText?.trim() || book.title);
+  const editionLine = cssQuote([s.edition, s.year].filter(Boolean).join(' · ') || '');
+
+  const headerLeft = showHeader
+    ? `
+  @top-left {
+    content: ${headerTitle};
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #1B4D3E;
+    vertical-align: bottom;
+    padding-bottom: 4px;
+  }`
+    : '';
+
+  const headerRight = showHeader && editionLine !== '""'
+    ? `
+  @top-right {
+    content: ${editionLine};
+    font-size: 8pt;
+    color: #666;
+    vertical-align: bottom;
+    padding-bottom: 4px;
+  }`
+    : '';
+
+  const pageNumOuter = showPages && placement === 'outer'
+    ? `
+  @page :left {
+    @bottom-left {
+      content: counter(page);
+      font-size: 9pt;
+      color: #1B4D3E;
+      vertical-align: top;
+      padding-top: 6px;
+    }
+  }
+
+  @page :right {
+    @bottom-right {
+      content: counter(page);
+      font-size: 9pt;
+      color: #1B4D3E;
+      vertical-align: top;
+      padding-top: 6px;
+    }
+  }`
+    : '';
+
+  const pageNumCenter = showPages && placement === 'center'
+    ? `
+  @bottom-center {
+    content: counter(page);
+    font-size: 9pt;
+    color: #1B4D3E;
+    vertical-align: top;
+    padding-top: 6px;
+  }`
+    : '';
+
+  const coverReset = `
+  @page cover {
+    margin: 1.5cm;
+    @top-left { content: none; }
+    @top-center { content: none; }
+    @top-right { content: none; }
+    @bottom-left { content: none; }
+    @bottom-center { content: none; }
+    @bottom-right { content: none; }
+  }`;
 
   return `
   @page {
-    size: ${page.cssSize};
-    margin: ${pageTop} ${margins.right} ${pageBottom} ${margins.left};
+    size: ${getPageDimensions(book).cssSize};
+    margin: ${showHeader ? '2.4cm' : margins.top} ${margins.right} ${showPages ? '2.0cm' : margins.bottom} ${margins.left};
+    ${headerLeft}
+    ${headerRight}
+    ${pageNumCenter}
   }
+  ${pageNumOuter}
+  ${coverReset}`;
+}
 
-  @page cover {
-    margin: 1.2cm;
-  }
+function buildBookStyles(book: BookProject): string {
+  const margins = getMargins(book);
+
+  return `
+  ${buildPageMarginCss(book, margins)}
 
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
@@ -67,87 +147,7 @@ function buildBookStyles(book: BookProject): string {
   img { max-width: 100%; height: auto; border: 0; }
 
   .book-content { display: block; width: 100%; }
-
-  .print-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1.55cm;
-    padding: 0.28cm ${margins.right} 0 ${margins.left};
-    background: #fff;
-  }
-
-  .print-header table,
-  .print-footer table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 0;
-  }
-
-  .print-header .header-main {
-    vertical-align: bottom;
-    width: 72%;
-    padding-bottom: 3px;
-  }
-
-  .print-header .header-label {
-    display: block;
-    font-size: 6.5pt;
-    letter-spacing: 1.8px;
-    text-transform: uppercase;
-    color: #C9A227;
-    margin-bottom: 2px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-  }
-
-  .print-header .header-title {
-    display: block;
-    font-size: 9.5pt;
-    font-weight: 600;
-    color: #1B4D3E;
-    line-height: 1.25;
-  }
-
-  .print-header .header-meta {
-    font-size: 8pt;
-    color: #666;
-    text-align: right;
-    vertical-align: bottom;
-    width: 28%;
-    padding-bottom: 3px;
-    line-height: 1.35;
-  }
-
-  .print-header .header-rule {
-    border: 0;
-    border-bottom: 1pt solid #C9A227;
-    margin: 0;
-    height: 0;
-  }
-
-  .print-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1.1cm;
-    padding: 0.18cm ${margins.right} 0.22cm ${margins.left};
-    background: #fff;
-  }
-
-  .print-footer .footer-page {
-    text-align: center;
-    font-size: 9pt;
-    color: #1B4D3E;
-    font-weight: 500;
-    vertical-align: middle;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-  }
-
-  .page-number-only::after {
-    content: counter(page);
-  }
+  .content-start { page-break-before: always; }
 
   .cover-pages .cover-page {
     page: cover;
@@ -318,10 +318,8 @@ function buildBookStyles(book: BookProject): string {
   .copyright-meta { font-size: 10pt; color: #666; margin-top: 10px; }
 
   @media print {
-    ${!showRunning ? '.print-header { display: none !important; }' : ''}
-    ${!showPages ? '.print-footer { display: none !important; }' : ''}
     .chapter, .front-section, .back-section { page-break-inside: auto; }
-    table, blockquote, .callout, figure, .imgtext-table, .stacked-block { page-break-inside: avoid; }
+    table, blockquote, .callout, figure, .imgtext-table, .stacked-block, .wrap-block { page-break-inside: avoid; }
   }
 
   @media screen {
@@ -338,48 +336,50 @@ function buildBookStyles(book: BookProject): string {
       box-shadow: 0 1px 10px rgba(0, 0, 0, 0.08);
     }
 
-    .print-header,
-    .print-footer {
-      position: relative;
-      margin-bottom: 14px;
+    .screen-page-hint {
+      font-size: 10px;
+      color: #888;
+      text-align: center;
+      margin-bottom: 12px;
+      font-style: italic;
     }
-
-    .print-footer { margin-top: 18px; }
   }
 `;
 }
 
-function renderRunningHead(book: BookProject): string {
-  const s = book.settings;
-  const showHeader = s.includeRunningHeader !== false;
-  const showPages = s.includePageNumbers !== false;
-  if (!showHeader && !showPages) return '';
+function renderRunningHead(_book: BookProject): string {
+  return `<p class="screen-page-hint">Preview: headers and page numbers appear in the exported PDF.</p>`;
+}
 
-  const headerTitle = escapeHtml(s.headerText?.trim() || book.title);
-  const edition = escapeHtml(s.edition?.trim() || '');
-  const year = escapeHtml(s.year?.trim() || '');
-  const editionLine = [edition, year].filter(Boolean).join(' · ');
-
-  const header = showHeader
-    ? `<div class="print-header">
-        <table cellpadding="0" cellspacing="0" border="0"><tr>
-          <td class="header-main">
-            <span class="header-label">Librarians Licensure Examination Reviewer</span>
-            <span class="header-title">${headerTitle}</span>
-          </td>
-          <td class="header-meta">${editionLine || '&nbsp;'}</td>
-        </tr></table>
-        <hr class="header-rule" />
-      </div>`
+function renderWrapImageBlock(
+  block: ContentBlock,
+  layout: 'wrap-left' | 'wrap-right'
+): string {
+  const size = getImageSize(block);
+  const layoutClass = getLayoutClass(layout);
+  const floatStyle =
+    layout === 'wrap-left'
+      ? `float:left;margin:0 14px 10px 0;max-width:${getPdfImageCellWidth(size)};`
+      : `float:right;margin:0 0 10px 14px;max-width:${getPdfImageCellWidth(size)};`;
+  const floatedImg = block.imageUri
+    ? `<img src="${block.imageUri}" alt="${escapeHtml(block.caption ?? 'Figure')}" style="display:block;${floatStyle}max-height:${getPdfImageMaxHeight(size)};height:auto;" />`
     : '';
-
-  const footer = showPages
-    ? `<div class="print-footer"><table cellpadding="0" cellspacing="0" border="0"><tr>
-        <td class="footer-page"><span class="page-number-only"></span></td>
-      </tr></table></div>`
+  const caption = block.caption
+    ? `<p class="side-caption">${escapeHtml(block.caption)}</p>`
     : '';
+  const text = `<div class="side-text"><p>${escapeHtml(block.text ?? '').replace(/\n/g, '<br/>')}</p>${caption}</div>`;
+  return `<div class="wrap-block ${layoutClass}">${floatedImg}${text}</div>`;
+}
 
-  return header + footer;
+function renderImageBlock(block: ContentBlock): string {
+  if (!block.imageUri) return '';
+  const wrap = block.imageWrap ?? 'none';
+  if ((wrap === 'wrap-left' || wrap === 'wrap-right') && block.text?.trim()) {
+    return renderWrapImageBlock(block, wrap);
+  }
+  const size = getImageSize(block);
+  const cap = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : '';
+  return `<figure class="figure-item">${renderPdfImage(block.imageUri, size, block.caption ?? 'Figure')}${cap}</figure>`;
 }
 
 function renderPdfImage(
@@ -494,11 +494,8 @@ function renderBlock(block: ContentBlock, citations: Map<string, Citation>): str
       return `<p class="footnote"><sup>*</sup> ${escapeHtml(block.text ?? '')}</p>`;
     case 'divider':
       return '<hr class="divider"/>';
-    case 'image': {
-      if (!block.imageUri) return '';
-      const size = getImageSize(block);
-      return `<figure class="figure-item">${renderPdfImage(block.imageUri, size, block.caption ?? 'Figure')}<figcaption>${escapeHtml(block.caption ?? '')}</figcaption></figure>`;
-    }
+    case 'image':
+      return renderImageBlock(block);
     case 'image-text':
       return renderImageTextContent(block);
     case 'image-collage':
@@ -811,7 +808,7 @@ export function buildBookHtml(
 <body>
   <div class="cover-pages">${coverParts.join('\n')}</div>
   ${runningHead}
-  <main class="book-content">${contentParts.join('\n')}</main>
+  <main class="book-content content-start">${contentParts.join('\n')}</main>
 </body>
 </html>`;
 }

@@ -61,7 +61,9 @@ export type ImageLayout =
   | 'wrap-left'
   | 'wrap-right'
   | 'center';
+export type ImageWrap = 'none' | 'wrap-left' | 'wrap-right';
 export type CollageColumns = 2 | 3;
+export type PageNumberPlacement = 'outer' | 'center';
 
 export interface TableCell {
   value: string;
@@ -78,6 +80,8 @@ export interface ContentBlock {
   imagePosition?: ImagePosition;
   imageLayout?: ImageLayout;
   imageSize?: ImageSize;
+  /** Text wrap for standalone image blocks */
+  imageWrap?: ImageWrap;
   collageColumns?: CollageColumns;
   caption?: string;
   rows?: TableCell[][];
@@ -139,6 +143,7 @@ export interface BookSettings {
   marginPreset: MarginPreset;
   includeRunningHeader: boolean;
   includePageNumbers: boolean;
+  pageNumberPlacement: PageNumberPlacement;
   headerText?: string;
   footerText?: string;
 }

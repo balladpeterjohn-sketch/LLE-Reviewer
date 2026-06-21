@@ -7,6 +7,8 @@ import { formatCitation } from '../utils/citation';
 import {
   getImageLayout,
   getImageSize,
+  getImageWrap,
+  hasImageWrapText,
   getNativeFullImageStyle,
   getNativeSideImageSize,
   getNativeStackedImageStyle,
@@ -61,7 +63,42 @@ function BlockView({
         </View>
       );
     case 'image':
-      return block.imageUri ? (
+      if (!block.imageUri) return null;
+      if (hasImageWrapText(block)) {
+        const wrap = getImageWrap(block) as 'wrap-left' | 'wrap-right';
+        const imageLeft = wrap === 'wrap-left';
+        const size = getImageSize(block);
+        const imageStyle = getNativeSideImageSize(size);
+        const image = (
+          <Image
+            source={{ uri: block.imageUri }}
+            style={[styles.sideImage, imageStyle]}
+            resizeMode="cover"
+          />
+        );
+        const text = (
+          <View style={styles.sideTextWrap}>
+            <Text style={styles.paragraph}>{block.text || ''}</Text>
+            {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
+          </View>
+        );
+        return (
+          <View style={styles.imageTextRow}>
+            {imageLeft ? (
+              <>
+                {image}
+                {text}
+              </>
+            ) : (
+              <>
+                {text}
+                {image}
+              </>
+            )}
+          </View>
+        );
+      }
+      return (
         <View style={styles.figure}>
           <Image
             source={{ uri: block.imageUri }}
@@ -70,7 +107,7 @@ function BlockView({
           />
           {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
         </View>
-      ) : null;
+      );
     case 'image-text': {
       const layout = getImageLayout(block);
       const size = getImageSize(block);

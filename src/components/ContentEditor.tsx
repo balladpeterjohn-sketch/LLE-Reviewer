@@ -15,15 +15,18 @@ import {
 import { generateId } from '../utils/id';
 import { getCitations } from '../services/storage';
 import { colors, spacing } from '../theme';
-import { Citation, ContentBlock, ImageLayout, ImageSize } from '../types';
+import { Citation, ContentBlock, ImageLayout, ImageSize, ImageWrap } from '../types';
 import { formatCitation } from '../utils/citation';
 import {
   IMAGE_LAYOUT_LABELS,
   IMAGE_LAYOUTS,
   IMAGE_SIZE_LABELS,
   IMAGE_SIZES,
+  IMAGE_WRAP_LABELS,
+  IMAGE_WRAP_OPTIONS,
   getImageLayout,
   getImageSize,
+  getImageWrap,
   getNativeFullImageStyle,
   getNativeSideImageSize,
   getNativeStackedImageStyle,
@@ -55,6 +58,7 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
     }
     if (type === 'image') {
       block.imageSize = 'small';
+      block.imageWrap = 'none';
     }
     if (type === 'image-text') {
       block.text = '';
@@ -314,6 +318,22 @@ export function ContentEditor({ blocks, onChange }: ContentEditorProps) {
               <Text style={styles.controlHint}>
                 Small = compact · Full = page width. Changes apply in preview and PDF.
               </Text>
+              <Text style={styles.controlLabel}>Text wrap</Text>
+              <OptionChips
+                options={IMAGE_WRAP_OPTIONS.map((w) => ({ value: w, label: IMAGE_WRAP_LABELS[w] }))}
+                selected={getImageWrap(block)}
+                onSelect={(wrap) => updateBlock(index, { imageWrap: wrap as ImageWrap })}
+              />
+              {(getImageWrap(block) === 'wrap-left' || getImageWrap(block) === 'wrap-right') && (
+                <TextInput
+                  style={styles.textArea}
+                  multiline
+                  placeholder="Text that wraps around the image..."
+                  value={block.text}
+                  onChangeText={(text) => updateBlock(index, { text })}
+                  textAlignVertical="top"
+                />
+              )}
               {block.imageUri ? (
                 <Image
                   source={{ uri: block.imageUri }}

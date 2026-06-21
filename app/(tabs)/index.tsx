@@ -87,7 +87,7 @@ export default function HomeScreen() {
         </Text>
       </Card>
 
-      <Text style={styles.versionText}>App version {Constants.expoConfig?.version ?? '1.1.0'}</Text>
+      <Text style={styles.versionText}>App version {Constants.expoConfig?.version ?? '1.2.0'}</Text>
     </ScrollView>
   );
 }

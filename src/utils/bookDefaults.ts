@@ -24,6 +24,7 @@ export const DEFAULT_BOOK_SETTINGS: BookSettings = {
   marginPreset: 'standard',
   includeRunningHeader: true,
   includePageNumbers: true,
+  pageNumberPlacement: 'outer',
 };
 
 export const DEFAULT_FRONT_MATTER: BookFrontMatter = {
