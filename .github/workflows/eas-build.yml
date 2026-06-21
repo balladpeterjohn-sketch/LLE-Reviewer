@@ -12,17 +12,22 @@ jobs:
         with:
           ref: main
 
-      - name: Show build commit
+      - name: Verify source includes image tools
         run: |
           echo "Building commit: $(git rev-parse --short HEAD)"
           git log -1 --oneline
-          grep -n "imageToolsCard\|IMAGE_SIZES" src/components/ContentEditor.tsx | head -3 || echo "WARNING image tools not found in source"
+          echo "App version: $(node -p "require('./app.json').expo.version")"
+          if grep -q "imageToolsCard" src/components/ContentEditor.tsx; then
+            echo "OK: Image Tools UI found in source"
+          else
+            echo "::error::Image Tools UI missing from source — wrong branch or old code"
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 22
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
@@ -33,5 +38,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Android APK
-        run: eas build --platform android --profile preview --non-interactive --no-wait
+      - name: Build Android APK on Expo
+        run: |
+          echo "Starting EAS build (APK). Download from expo.dev when status is Finished."
+          eas build --platform android --profile preview --non-interactive --no-wait
