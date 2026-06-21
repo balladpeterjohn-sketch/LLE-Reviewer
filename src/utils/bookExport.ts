@@ -1421,7 +1421,7 @@ function buildTocEntries(book: BookProject, materials: ReadingMaterial[]): TocEn
   const groups = buildMaterialGroups(book, materials);
 
   for (const group of groups) {
-    const firstMaterial = group.kind === 'single' ? group.material : group.materials[0];
+    const firstMaterial = group.kind === 'single' ? group.material : group.group.materials[0];
 
     if (s.groupBySubject && firstMaterial.subjectId !== lastSubject) {
       const subject = findSubject(firstMaterial.subjectId);
@@ -1437,10 +1437,9 @@ function buildTocEntries(book: BookProject, materials: ReadingMaterial[]): TocEn
       const prefix = s.numberChapters ? `Chapter ${chapter}: ` : '';
       entries.push({ id: `ch-${group.material.id}`, label: `${prefix}${group.material.title}`, level: 2 });
     } else {
-      // Grouped subtopics: chapter entry for parent + sub-entries for each subtopic
       const prefix = s.numberChapters ? `Chapter ${chapter}: ` : '';
-      entries.push({ id: `ch-group-${group.materials[0].id}`, label: `${prefix}${group.parentTopic.title}`, level: 2 });
-      for (const material of group.materials) {
+      entries.push({ id: `ch-group-${group.group.materials[0].id}`, label: `${prefix}${group.group.groupTitle}`, level: 2 });
+      for (const material of group.group.materials) {
         const topicInfo = findTopic(material.subjectId, material.topicId);
         const code = topicInfo?.topic.code ?? '';
         entries.push({ id: `ch-${material.id}`, label: `${code} ${material.title}`.trim(), level: 3 });
@@ -1551,44 +1550,89 @@ function renderListOfFigures(materials: ReadingMaterial[]): string {
 
 /* ── MATERIAL GROUPING ─────────────────────────────────────────────────── */
 
-type MaterialGroup =
-  | { kind: 'single'; material: ReadingMaterial }
-  | { kind: 'grouped'; parentTopic: TosTopic; subjectId: string; materials: ReadingMaterial[] };
+interface TopicGroup {
+  groupKey:   string;  // subjectId:parentTopicId
+  groupTitle: string;  // human-readable chapter title
+  subjectId:  string;
+  materials:  ReadingMaterial[];
+}
 
-function buildMaterialGroups(book: BookProject, materials: ReadingMaterial[]): MaterialGroup[] {
+/** Returns a group key for a material if it should be merged with siblings.
+ *  Returns null if the material should be its own individual chapter.
+ *
+ *  Two materials get the same group key when:
+ *   (a) their topicId is a CHILD of the same parent topic  (e.g. lom-1-1 & lom-1-2), OR
+ *   (b) their topicId IS the parent topic which has children  (e.g. both stored at lom-1)
+ */
+function getTopicGroupKey(
+  material: ReadingMaterial
+): { groupKey: string; groupTitle: string } | null {
+  const topicInfo = findTopic(material.subjectId, material.topicId);
+  if (!topicInfo) return null;
+
+  if (topicInfo.parent) {
+    // Child topic (e.g. 1.1, 1.2) → group under parent
+    return {
+      groupKey:   `${material.subjectId}:${topicInfo.parent.id}`,
+      groupTitle: topicInfo.parent.title,
+    };
+  }
+
+  if (topicInfo.topic.children && topicInfo.topic.children.length > 0) {
+    // Material stored directly on a parent topic that HAS children
+    // (user created material at the parent level) → still group by this topic
+    return {
+      groupKey:   `${material.subjectId}:${topicInfo.topic.id}`,
+      groupTitle: topicInfo.topic.title,
+    };
+  }
+
+  // Leaf topic with no children → standalone chapter
+  return null;
+}
+
+function buildMaterialGroups(book: BookProject, materials: ReadingMaterial[]): Array<
+  | { kind: 'single';   material: ReadingMaterial }
+  | { kind: 'grouped';  group: TopicGroup }
+> {
   const ordered = book.sections
+    .slice()
     .sort((a, b) => a.order - b.order)
     .map((sec) => materials.find((m) => m.id === sec.materialId))
     .filter((m): m is ReadingMaterial => !!m);
 
-  const groups: MaterialGroup[] = [];
+  const result: Array<
+    | { kind: 'single'; material: ReadingMaterial }
+    | { kind: 'grouped'; group: TopicGroup }
+  > = [];
 
   for (const material of ordered) {
-    const topicInfo = findTopic(material.subjectId, material.topicId);
+    const groupInfo = getTopicGroupKey(material);
 
-    if (topicInfo?.parent) {
-      // This material belongs to a subtopic — try to append to an existing group
-      const last = groups[groups.length - 1];
+    if (groupInfo) {
+      const last = result[result.length - 1];
       if (
         last?.kind === 'grouped' &&
-        last.parentTopic.id === topicInfo.parent.id &&
-        last.subjectId === material.subjectId
+        last.group.groupKey === groupInfo.groupKey
       ) {
-        last.materials.push(material);
+        last.group.materials.push(material);
       } else {
-        groups.push({
+        result.push({
           kind: 'grouped',
-          parentTopic: topicInfo.parent,
-          subjectId: material.subjectId,
-          materials: [material],
+          group: {
+            groupKey:   groupInfo.groupKey,
+            groupTitle: groupInfo.groupTitle,
+            subjectId:  material.subjectId,
+            materials:  [material],
+          },
         });
       }
     } else {
-      groups.push({ kind: 'single', material });
+      result.push({ kind: 'single', material });
     }
   }
 
-  return groups;
+  return result;
 }
 
 function renderMaterial(
@@ -1617,20 +1661,19 @@ function renderMaterial(
 }
 
 function renderGroupedChapter(
-  parentTopic: TosTopic,
-  materials: ReadingMaterial[],
+  group: TopicGroup,
   citations: Map<string, Citation>,
   chapterNum: number,
   settings: BookProject['settings']
 ): string {
   const chapterTitle = settings.numberChapters
-    ? `Chapter ${chapterNum}: ${parentTopic.title}`
-    : parentTopic.title;
+    ? `Chapter ${chapterNum}: ${group.groupTitle}`
+    : group.groupTitle;
   const chapNumDecoration = settings.numberChapters
     ? `<div class="chapter-num-decoration">${chapterNum}</div>`
     : '';
 
-  const sections = materials.map((material) => {
+  const sections = group.materials.map((material) => {
     const topicInfo = findTopic(material.subjectId, material.topicId);
     const subtopicLabel = topicInfo
       ? `${topicInfo.topic.code} \u2014 ${topicInfo.topic.title}`
@@ -1646,7 +1689,7 @@ function renderGroupedChapter(
   }).join('\n');
 
   return `
-    <section class="chapter page-break" id="ch-group-${materials[0].id}">
+    <section class="chapter page-break" id="ch-group-${group.materials[0].id}">
       ${chapNumDecoration}
       <h2 class="chapter-title">${escapeHtml(chapterTitle)}</h2>
       ${sections}
@@ -1663,8 +1706,8 @@ function renderBody(
   const parts: string[] = [];
   const groups = buildMaterialGroups(book, materials);
 
-  for (const group of groups) {
-    const firstMaterial = group.kind === 'single' ? group.material : group.materials[0];
+  for (const entry of groups) {
+    const firstMaterial = entry.kind === 'single' ? entry.material : entry.group.materials[0];
 
     if (book.settings.groupBySubject && firstMaterial.subjectId !== lastSubject) {
       const subject = findSubject(firstMaterial.subjectId);
@@ -1684,10 +1727,10 @@ function renderBody(
     }
 
     chapter++;
-    if (group.kind === 'single') {
-      parts.push(renderMaterial(group.material, citations, chapter, book.settings));
+    if (entry.kind === 'single') {
+      parts.push(renderMaterial(entry.material, citations, chapter, book.settings));
     } else {
-      parts.push(renderGroupedChapter(group.parentTopic, group.materials, citations, chapter, book.settings));
+      parts.push(renderGroupedChapter(entry.group, citations, chapter, book.settings));
     }
   }
 
